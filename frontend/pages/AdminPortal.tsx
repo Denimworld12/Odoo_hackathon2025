@@ -39,7 +39,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
   // 1. Fetch Services from Backend
   const fetchServices = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/all-appointments');
+      const res = await axios.get('http://localhost:5000/api/all-appointments');
       setServices(res.data.appointments || []);
     } catch (err) {
       console.error("Fetch failed", err);
@@ -60,10 +60,10 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
 
       if (editingId) {
         // UPDATE
-        await axios.put(`http://localhost:5000/services/${editingId}`, formData, { headers });
+        await axios.put(`http://localhost:5000/api/services/${editingId}`, formData, { headers });
       } else {
         // CREATE
-        await axios.post('http://localhost:5000/services', formData, { headers });
+        await axios.post('http://localhost:5000/api/services', formData, { headers });
       }
       
       setIsModalOpen(false);
@@ -81,7 +81,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
     if (!window.confirm("Delete this appointment type permanently?")) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/services/${id}`, {
+      await axios.delete(`http://localhost:5000/api/services/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setServices(prev => prev.filter(s => s.id !== id));

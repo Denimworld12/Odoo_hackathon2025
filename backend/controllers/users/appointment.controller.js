@@ -1,4 +1,4 @@
-const { pool } = require("../config/db.js");
+const { pool } = require("../../config/db.js");
 
 /**
  * GET ALL APPOINTMENT TYPES
@@ -34,4 +34,15 @@ const getAllAppointments = async (req, res) => {
     });
   }
 };
+
+
+const updateAppointmentsforUser = async (req, res) => {
+  try {
+    
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch user appointments" });
+  }
+}
+
 module.exports = { getAllAppointments };
+

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Role } from "../types";
+import useEffect from 'react';
 import {
   ShieldCheck,
   Mail,
@@ -88,8 +89,13 @@ const AuthPages: React.FC<AuthPagesProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
 
+  };
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      setStep("LOGIN");
+    }
+  }, [step]);
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">

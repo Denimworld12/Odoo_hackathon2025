@@ -1,8 +1,8 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { pool } = require("../config/db.js");
+const { pool } = require("../../config/db.js");
 const crypto = require("crypto");
-const { transporter } = require("../utils/mail.js");
+const { transporter } = require("../../utils/mail.js");
 
 /**
  * REGISTER

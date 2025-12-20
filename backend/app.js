@@ -39,7 +39,15 @@ app.get("/test-db", async (req, res) => {
 
 app.use("/api/users", userRouter);
 app.use("/api/appointments", require("./routes/appointment.routes").appointmentRouter);
+<<<<<<< HEAD
 app.use("/api/razorpay", require("./routes/razorpay.routes"));
+=======
+<<<<<<< HEAD
+
+=======
+app.use("/api/razorpay", require("./routes/razorpay.routes"));
+>>>>>>> ddd86cfecc32b456310dfedffb4312ad2a35fbc4
+>>>>>>> f5f9f3719d84a84c66c241a6262f497d07cd3a40
 app.listen(5000, ()=>{
     console.log('server is running on port 3000');  
 })

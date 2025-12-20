@@ -38,6 +38,7 @@ app.get("/test-db", async (req, res) => {
 });
 
 app.use("/api/users", userRouter);
+app.use("/api/appointments", require("./routes/appointment.routes").appointmentRouter);
 
 app.listen(3000, ()=>{
     console.log('server is running on port 3000');  

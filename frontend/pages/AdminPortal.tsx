@@ -118,6 +118,50 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
     </button>
   );
 
+
+//   const handleCreateService = async () => {
+//   try {
+//     setIsSaving(true);
+
+//     const res = await fetch(
+//       "http://localhost:5000/api/appointments/create-appointment",
+//       {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json"
+//         },
+//         body: JSON.stringify({
+//           title: newService.title,
+//           description: newService.description,
+//           location: newService.location,
+//           duration_minutes: Number(newService.duration_minutes),
+//           booking_fee: Number(newService.booking_fee),
+//           is_published: true
+//         })
+//       }
+//     );
+
+//     const data = await res.json();
+//     if (!res.ok) throw new Error(data.message || "Failed to create service");
+
+//     setShowAddServiceModal(false);
+//     setNewService({
+//       title: "",
+//       description: "",
+//       location: "",
+//       duration_minutes: 30,
+//       booking_fee: 0
+//     });
+
+//     alert("Service created successfully");
+//   } catch (err: any) {
+//     alert(err.message);
+//   } finally {
+//     setIsSaving(false);
+//   }
+// };
+
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar - Same as before */}
@@ -272,3 +316,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
 };
 
 export default AdminPortal;
+
+function setShowAddServiceModal(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}

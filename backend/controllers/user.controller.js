@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db.js");
 const crypto = require("crypto");
+const { transporter } = require("../utils/mail.js");
 
 /**
  * REGISTER
@@ -96,9 +97,9 @@ const loginUser = async (req, res) => {
 };
 
 /**
- * FORGOT PASSWORD
+ * FORGOT PASSWORD (EMAIL OTP)
  */
-const forgotPassword = async (req, res) => {
+ const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -115,7 +116,7 @@ const forgotPassword = async (req, res) => {
     // generate 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
 
-    // store OTP in DB
+    // store OTP
     await pool.query(
       `
       UPDATE public.users
@@ -125,14 +126,23 @@ const forgotPassword = async (req, res) => {
       [otp, email]
     );
 
-    // 🚨 TEMP: return OTP in response (replace with email later)
-    res.json({
-      message: "OTP generated",
-      otp
+    // send email
+    await transporter.sendMail({
+      from: `"Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Password Reset OTP",
+      html: `
+        <h2>Password Reset</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for a short time.</p>
+      `
     });
+
+    res.json({ message: "OTP sent to your email" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Forgot password failed" });
+    res.status(500).json({ message: "Failed to send OTP" });
   }
 };
 

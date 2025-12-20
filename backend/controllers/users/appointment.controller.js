@@ -1,4 +1,4 @@
-const { pool } = require("../config/db.js");
+const { pool } = require("../../config/db.js");
 
 /**
  * GET ALL APPOINTMENT TYPES
@@ -35,6 +35,19 @@ const getAllAppointments = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD:backend/controllers/users/appointment.controller.js
+
+const updateAppointmentsforUser = async (req, res) => {
+  try {
+    
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch user appointments" });
+  }
+}
+
+module.exports = { getAllAppointments };
+
+=======
 /**
  * CREATE APPOINTMENT TYPE
  * POST /api/appointments
@@ -190,3 +203,4 @@ module.exports = { getAllAppointments,
   createAppointment,
   updateAppointment,
   deleteAppointment };
+>>>>>>> ddd86cfecc32b456310dfedffb4312ad2a35fbc4:backend/controllers/appointment.controller.js

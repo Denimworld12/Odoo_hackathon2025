@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 
 interface AuthPagesProps {
-  step: "LOGIN" | "SIGNUP" | "OTP" | "FORGOT";
-  setStep: (step: "LOGIN" | "SIGNUP" | "OTP" | "FORGOT") => void;
+  step: "LOGIN" | "SIGNUP" | "FORGOT";
+  setStep: (step: "LOGIN" | "SIGNUP" | "FORGOT") => void;
   onLogin: (role: Role) => void;
 }
 
@@ -26,6 +26,12 @@ const AuthPages: React.FC<AuthPagesProps> = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // 🔑 Forgot password flow state
+  const [forgotStage, setForgotStage] = useState<"EMAIL" | "RESET">("EMAIL");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,7 +41,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({
     setError("");
 
     try {
-      // REGISTER
+      /* ---------------- REGISTER ---------------- */
       if (step === "SIGNUP") {
         const res = await fetch(`${API_BASE}/users/register`, {
           method: "POST",
@@ -54,7 +60,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({
         return;
       }
 
-      // LOGIN
+      /* ---------------- LOGIN ---------------- */
       if (step === "LOGIN") {
         const res = await fetch(`${API_BASE}/users/login`, {
           method: "POST",
@@ -70,8 +76,8 @@ const AuthPages: React.FC<AuthPagesProps> = ({
         return;
       }
 
-      // FORGOT PASSWORD
-      if (step === "FORGOT") {
+      /* ---------------- FORGOT → SEND OTP ---------------- */
+      if (step === "FORGOT" && forgotStage === "EMAIL") {
         const res = await fetch(`${API_BASE}/users/forgot-password`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -81,11 +87,38 @@ const AuthPages: React.FC<AuthPagesProps> = ({
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
-        alert("OTP sent to your email");
+        // ✅ Stay on FORGOT, move to RESET stage
+        setForgotStage("RESET");
+        return;
+      }
+
+      /* ---------------- FORGOT → RESET PASSWORD ---------------- */
+      if (step === "FORGOT" && forgotStage === "RESET") {
+        const res = await fetch(`${API_BASE}/users/reset-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            otp,
+            new_password: newPassword
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Reset failed");
+
+        alert("Password reset successful");
+
+        // reset local forgot flow
+        setForgotStage("EMAIL");
+        setOtp("");
+        setNewPassword("");
+
         setStep("LOGIN");
+        return;
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }
@@ -112,12 +145,11 @@ const AuthPages: React.FC<AuthPagesProps> = ({
             <h1 className="text-3xl font-bold text-slate-900 mb-2">
               {step === "LOGIN" && "Welcome Back"}
               {step === "SIGNUP" && "Create Account"}
-              {step === "FORGOT" && "Forgot Password"}
+              {step === "FORGOT" && "Reset Password"}
             </h1>
             <p className="text-slate-500">
-              {step === "LOGIN" && "Sign in to continue"}
-              {step === "SIGNUP" && "Create a new account"}
-              {step === "FORGOT" && "We’ll send you a reset OTP"}
+              {step === "FORGOT" && forgotStage === "EMAIL" && "Enter your email to receive an OTP"}
+              {step === "FORGOT" && forgotStage === "RESET" && "Enter OTP and your new password"}
             </p>
           </div>
 
@@ -165,6 +197,26 @@ const AuthPages: React.FC<AuthPagesProps> = ({
               </div>
             )}
 
+            {step === "FORGOT" && forgotStage === "RESET" && (
+              <>
+                <input
+                  type="text"
+                  placeholder="OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl"
+                />
+
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl"
+                />
+              </>
+            )}
+
             {error && (
               <p className="text-red-600 text-sm text-center font-medium">
                 {error}
@@ -188,40 +240,28 @@ const AuthPages: React.FC<AuthPagesProps> = ({
               disabled={isLoading}
               className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl flex justify-center items-center gap-2"
             >
-              {isLoading ? "Please wait..." : (
-                <>
-                  {step === "LOGIN" && "Sign In"}
-                  {step === "SIGNUP" && "Sign Up"}
-                  {step === "FORGOT" && "Send OTP"}
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
+              {isLoading
+                ? "Please wait..."
+                : step === "FORGOT"
+                ? forgotStage === "EMAIL"
+                  ? "Send OTP"
+                  : "Reset Password"
+                : step === "LOGIN"
+                ? "Sign In"
+                : "Sign Up"}
+              <ArrowRight className="w-5 h-5" />
             </button>
           </form>
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            {step === "LOGIN" && (
-              <p className="text-slate-500">
-                No account?{" "}
-                <button
-                  onClick={() => setStep("SIGNUP")}
-                  className="text-indigo-600 font-bold"
-                >
-                  Sign up
-                </button>
-              </p>
-            )}
-
-            {(step === "SIGNUP" || step === "FORGOT") && (
-              <button
-                onClick={() => setStep("LOGIN")}
-                className="flex items-center gap-2 mx-auto text-slate-500"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Login
-              </button>
-            )}
+            <button
+              onClick={() => setStep("LOGIN")}
+              className="flex items-center gap-2 mx-auto text-slate-500"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </button>
           </div>
         </div>
       </div>

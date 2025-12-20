@@ -1,116 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { User, Service } from '../types';
+import React, { useState } from 'react';
+import { User, Service, Provider, Appointment, Question, TimeSlotRange } from '../types';
 import { 
-  Users, Calendar, Clock, BarChart3, Settings, Shield, Search, 
-  Menu, X, Bell, LogOut, Trash2, Edit3, Check, Filter, TrendingUp, UserCheck,
-  PlusCircle, MapPin, DollarSign, Save
+  Calendar, Clock, Settings, LogOut, Search, PlusCircle, Edit3, Trash2, 
+  Check, X, Eye, Share2, Save, ChevronRight, BarChart3, Users, EyeOff, 
+  Upload, Image as ImageIcon, ArrowRight, Copy, CheckCircle2
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import axios from 'axios';
+import { MOCK_SERVICES, MOCK_PROVIDERS, MOCK_APPOINTMENTS } from '../constants';
 
-interface AdminPortalProps {
+interface OrganiserPortalProps {
   user: User;
   onLogout: () => void;
 }
 
-const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SERVICES' | 'BOOKINGS' | 'USERS' | 'REPORTS'>('DASHBOARD');
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const QUESTION_TYPES: Array<{value: Question['type'], label: string}> = [
+  { value: 'text', label: 'Single line text' },
+  { value: 'textarea', label: 'Multi-line text' },
+  { value: 'phone', label: 'Phone Number' },
+  { value: 'radio', label: 'Radio (One Answer)' },
+  { value: 'checkbox', label: 'Checkboxes (Multiple Answers)' },
+  { value: 'number', label: 'Number' },
+];
+
+const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => {
+  const [activeTab, setActiveTab] = useState<'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS'>('SERVICES');
+  const [services, setServices] = useState<Service[]>(MOCK_SERVICES);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [isEditingService, setIsEditingService] = useState(false);
+  const [configTab, setConfigTab] = useState<'BASIC' | 'SCHEDULE' | 'QUESTIONS' | 'OPTIONS' | 'MESSAGES'>('BASIC');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  
-  // --- REAL DATA STATE ---
-  const [services, setServices] = useState<any[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [shareLinkVisible, setShareLinkVisible] = useState(false);
+  const [newQuestion, setNewQuestion] = useState<Partial<Question>>({ type: 'text', required: false });
+  const [previewMode, setPreviewMode] = useState(false);
 
-  // Form State matching your Schema
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    location: '',
-    duration_minutes: 30,
-    booking_fee: '0.00',
-    manual_confirmation: false,
-    is_published: false,
-    target_type: 'USER',
-    assignment_type: 'AUTOMATIC'
-  });
+  // Form state for service configuration
+  const [serviceForm, setServiceForm] = useState<Partial<Service>>({});
+  const [workingHours, setWorkingHours] = useState<Record<string, TimeSlotRange[]>>({});
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const API_BASE = "http://localhost:5000/api";
 
-  // 1. Fetch Services from Backend
-  const fetchServices = async () => {
-    try {
-      const res = await axios.get('http://localhost:5000/api/all-appointments');
-      setServices(res.data.appointments || []);
-    } catch (err) {
-      console.error("Fetch failed", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchServices();
-  }, []);
-
-  // 2. Handle Create & Update
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      if (editingId) {
-        // UPDATE
-        await axios.put(`http://localhost:5000/api/services/${editingId}`, formData, { headers });
-      } else {
-        // CREATE
-        await axios.post('http://localhost:5000/api/services', formData, { headers });
-      }
-      
-      setIsModalOpen(false);
-      setEditingId(null);
-      fetchServices();
-    } catch (err) {
-      alert("Action failed. Check console.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 3. Handle Delete
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this appointment type permanently?")) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/services/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setServices(prev => prev.filter(s => s.id !== id));
-    } catch (err) {
-      alert("Delete failed.");
-    }
-  };
-
-  const openEdit = (service: any) => {
-    setEditingId(service.id);
-    setFormData({
-      title: service.title,
-      description: service.description || '',
-      location: service.location || '',
-      duration_minutes: service.duration_minutes,
-      booking_fee: service.booking_fee,
-      manual_confirmation: service.manual_confirmation,
-      is_published: service.is_published,
-      target_type: service.target_type,
-      assignment_type: service.assignment_type
-    });
-    setIsModalOpen(true);
-  };
 
   const NavItem = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
     <button
       onClick={() => setActiveTab(id)}
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-        activeTab === id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'
+        activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
       }`}
     >
       <Icon className="w-5 h-5" />
@@ -118,123 +52,307 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
     </button>
   );
 
+  const handleTogglePublish = (serviceId: string) => {
+    setServices(prev => prev.map(s => 
+      s.id === serviceId ? { ...s, published: !s.published } : s
+    ));
+  };
 
-//   const handleCreateService = async () => {
-//   try {
-//     setIsSaving(true);
+  const handleDeleteService = (serviceId: string) => {
+    if (confirm('Are you sure you want to delete this service?')) {
+      setServices(prev => prev.filter(s => s.id !== serviceId));
+    }
+  };
 
-//     const res = await fetch(
-//       "http://localhost:5000/api/appointments/create-appointment",
-//       {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//           title: newService.title,
-//           description: newService.description,
-//           location: newService.location,
-//           duration_minutes: Number(newService.duration_minutes),
-//           booking_fee: Number(newService.booking_fee),
-//           is_published: true
-//         })
-//       }
-//     );
+  const handleEditService = (service: Service) => {
+    setSelectedService(service);
+    setServiceForm({
+      ...service,
+      bookType: service.bookType || 'USER',
+      manageCapacity: service.manageCapacity || false,
+      slotCreation: service.slotCreation || `${String(Math.floor(service.duration / 60)).padStart(2, '0')}:${String(service.duration % 60).padStart(2, '0')}`,
+      cancellationHours: service.cancellationHours || 1,
+      introductionMessage: service.introductionMessage || '',
+      confirmationMessage: service.confirmationMessage || '',
+      picture: service.picture || undefined,
+    });
+    setQuestions(service.questions || []);
+    setWorkingHours(service.workingHours || {});
+    setIsEditingService(true);
+    setConfigTab('BASIC');
+    setShareLinkVisible(false);
+  };
 
-//     const data = await res.json();
-//     if (!res.ok) throw new Error(data.message || "Failed to create service");
+  const handleAddTimeSlot = (day: string) => {
+    const newSlot: TimeSlotRange = {
+      id: Date.now().toString(),
+      from: '09:00',
+      to: '17:00',
+      enabled: true,
+    };
+    setWorkingHours(prev => ({
+      ...prev,
+      [day]: [...(prev[day] || []), newSlot],
+    }));
+  };
 
-//     setShowAddServiceModal(false);
-//     setNewService({
-//       title: "",
-//       description: "",
-//       location: "",
-//       duration_minutes: 30,
-//       booking_fee: 0
-//     });
+  const handleRemoveTimeSlot = (day: string, slotId: string) => {
+    setWorkingHours(prev => ({
+      ...prev,
+      [day]: (prev[day] || []).filter(s => s.id !== slotId),
+    }));
+  };
 
-//     alert("Service created successfully");
-//   } catch (err: any) {
-//     alert(err.message);
-//   } finally {
-//     setIsSaving(false);
-//   }
-// };
+  const handleAddQuestion = () => {
+    if (newQuestion.label) {
+      const question: Question = {
+        id: Date.now().toString(),
+        label: newQuestion.label,
+        type: newQuestion.type || 'text',
+        required: newQuestion.required || false,
+        options: newQuestion.options || [],
+      };
+      setQuestions([...questions, question]);
+      setNewQuestion({ type: 'text', required: false });
+    }
+  };
 
+  const handleRemoveQuestion = (questionId: string) => {
+    setQuestions(questions.filter(q => q.id !== questionId));
+  };
+
+const handleSaveService = async () => {
+  if (!serviceForm.name || !serviceForm.duration) {
+    alert("Service name and duration are required");
+    return;
+  }
+
+
+  const payload = {
+    title: serviceForm.name,
+    description: serviceForm.description || "",
+    location: serviceForm.location || "",
+    duration_minutes: serviceForm.duration,
+    booking_fee: serviceForm.price || 0,
+    manual_confirmation: serviceForm.manualConfirmation ?? false,
+    is_published: serviceForm.published ?? false,
+    target_type: serviceForm.bookType || "USER",
+    assignment_type: serviceForm.assignmentType || "AUTOMATIC",
+    user_id: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}').id : null,
+  };
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/appointments/services`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to create service");
+    }
+
+    // ✅ DB SUCCESS → update UI from DB response
+    const createdService: Service = {
+      id: data.id,
+      name: data.title,
+      description: data.description,
+      duration: data.duration_minutes,
+      price: Number(data.booking_fee),
+      icon: "📅",
+      location: data.location,
+      type: Number(data.booking_fee) > 0 ? "Paid" : "Free",
+      providers: [],
+      published: data.is_published,
+      bookType: data.target_type,
+      assignmentType: data.assignment_type,
+    };
+
+    setServices((prev) => [...prev, createdService]);
+
+    alert("Service saved to database successfully ✅");
+
+    setIsEditingService(false);
+    setSelectedService(null);
+    setServiceForm({});
+  } catch (err: any) {
+    console.error(err);
+    alert(err.message);
+  }
+};
+
+
+  const generateShareLink = () => {
+    if (selectedService) {
+      return `https://bookease.app/service/${selectedService.id}`;
+    }
+    return '';
+  };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* Sidebar - Same as before */}
+    <div className="flex h-[calc(100vh-24px)] overflow-hidden bg-slate-50">
+      {/* Sidebar */}
       <aside className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-6 flex items-center justify-between">
-          {sidebarOpen && <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600 tracking-tighter">BookEase</div>}
+          {sidebarOpen && <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">BookEase</div>}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-slate-100 rounded">
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {sidebarOpen ? <X className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </button>
         </div>
+
         <nav className="flex-1 px-4 space-y-2 mt-4">
-          <NavItem id="DASHBOARD" icon={BarChart3} label="Dashboard" />
-          <NavItem id="SERVICES" icon={Shield} label="Services" />
+          <NavItem id="SERVICES" icon={Settings} label="My Services" />
           <NavItem id="BOOKINGS" icon={Calendar} label="All Bookings" />
-          <NavItem id="USERS" icon={Users} label="User Management" />
-          <NavItem id="REPORTS" icon={TrendingUp} label="Reports" />
+          <NavItem id="CALENDAR" icon={BarChart3} label="Calendar View" />
+          <NavItem id="SETTINGS" icon={Users} label="Resources" />
         </nav>
+
         <div className="p-4 border-t border-slate-100">
-          <button onClick={onLogout} className="flex items-center gap-3 w-full text-slate-400 hover:text-red-500 p-3">
-            <LogOut className="w-4 h-4" />{sidebarOpen && "Logout"}
-          </button>
+          <div className={`flex items-center gap-3 p-3 rounded-2xl bg-slate-50 ${!sidebarOpen && 'justify-center'}`}>
+            <img src={user.avatar} className="w-8 h-8 rounded-full" alt="Organiser" />
+            {sidebarOpen && (
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold truncate">{user.name}</p>
+                <p className="text-[10px] text-slate-500">Organiser</p>
+              </div>
+            )}
+            {sidebarOpen && <button onClick={onLogout} className="ml-auto text-slate-400 hover:text-red-500 transition-colors"><LogOut className="w-4 h-4" /></button>}
+          </div>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-6 sm:p-10 relative">
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 sm:p-10">
         <header className="flex justify-between items-center mb-10">
-           <div>
-              <h1 className="text-2xl font-black text-slate-900 capitalize">{activeTab.toLowerCase()}</h1>
-              <p className="text-slate-500 text-sm italic">Managing appointments and rules.</p>
-           </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {activeTab === 'SERVICES' && 'Service & Appointment Configuration'}
+              {activeTab === 'BOOKINGS' && 'All Bookings'}
+              {activeTab === 'CALENDAR' && 'Calendar View'}
+              {activeTab === 'SETTINGS' && 'Resource Management'}
+            </h1>
+            <p className="text-slate-500 text-sm">Manage your appointment types and bookings.</p>
+          </div>
         </header>
 
         {activeTab === 'SERVICES' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="space-y-6 animate-fade-in">
+            {/* Action Bar */}
+            <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
               <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3.5 top-2.5 w-5 h-5 text-slate-400" />
-                <input type="text" placeholder="Search your services..." className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm font-medium" />
+                <Search className="absolute left-3 top-2.5 w-5 h-5 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search services..." 
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 transition-all text-sm"
+                />
               </div>
               <button 
-                onClick={() => { setEditingId(null); setFormData({title: '', description: '', location: '', duration_minutes: 30, booking_fee: '0.00', manual_confirmation: false, is_published: false, target_type: 'USER', assignment_type: 'AUTOMATIC'}); setIsModalOpen(true); }}
-                className="bg-indigo-600 text-white px-6 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
+                onClick={() => {
+                  const newService: Service = {
+                    id: `s${services.length + 1}`,
+                    name: 'New Service',
+                    description: '',
+                    duration: 30,
+                    price: 0,
+                    icon: '📅',
+                    location: '',
+                    type: 'Free',
+                    providers: [],
+                    published: false,
+                    bookType: 'USER',
+                  };
+                  setServices([...services, newService]);
+                  handleEditService(newService);
+                }}
+                className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
               >
-                <PlusCircle className="w-5 h-5" /> Add New Type
+                <PlusCircle className="w-5 h-5" /> Create Service
               </button>
             </div>
 
+            {/* Services Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.map((service) => (
-                <div key={service.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+              {services.map(service => (
+                <div key={service.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner">
-                      {service.title.charAt(0)}
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(service)} className="p-2.5 text-slate-400 hover:text-indigo-600 bg-slate-50 rounded-xl transition-colors"><Edit3 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(service.id)} className="p-2.5 text-slate-400 hover:text-red-500 bg-slate-50 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    <div className="text-4xl">{service.icon}</div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleTogglePublish(service.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          service.published 
+                            ? 'text-green-600 hover:bg-green-50' 
+                            : 'text-slate-400 hover:bg-slate-100'
+                        }`}
+                        title={service.published ? 'Unpublish' : 'Publish'}
+                      >
+                        {service.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                      <button 
+                        onClick={() => handleEditService(service)}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteService(service.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <h3 className="font-black text-slate-900 text-lg mb-1 leading-tight">{service.title}</h3>
-                  <p className="text-xs text-slate-500 mb-6 line-clamp-2 font-medium">{service.description || "No description provided."}</p>
                   
-                  <div className="space-y-3 pt-4 border-t border-slate-50">
-                    <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-tighter">
-                       <div className="flex items-center gap-1.5 text-slate-400"><Clock className="w-3.5 h-3.5" />{service.duration_minutes} Minutes</div>
-                       <div className="text-indigo-600">${service.booking_fee} Fee</div>
+                  <h3 className="font-bold text-slate-900 mb-1 text-lg">{service.name}</h3>
+                  <p className="text-sm text-slate-500 mb-4 line-clamp-2">{service.description}</p>
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Duration</span>
+                      <span className="font-bold text-slate-900">{service.duration} mins</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${service.is_published ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                         {service.is_published ? 'Published' : 'Draft'}
-                       </span>
-                       <span className="text-[10px] font-bold text-slate-400">{service.target_type}</span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Price</span>
+                      <span className="font-bold text-slate-900">${service.price}</span>
                     </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Status</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        service.published 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {service.published ? 'Published' : 'Draft'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-50 flex gap-2">
+                    <button 
+                      onClick={() => handleEditService(service)}
+                      className="flex-1 bg-slate-900 text-white py-2 rounded-xl font-bold text-xs hover:bg-indigo-600 transition-all"
+                    >
+                      Configure
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSelectedService(service);
+                        setShareLinkVisible(true);
+                      }}
+                      className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+                      title="Share link"
+                    >
+                      <Share2 className="w-4 h-4 text-slate-400" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -242,72 +360,706 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
           </div>
         )}
 
-        {/* --- DYNAMIC MODAL FOR POST/UPDATE --- */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[3rem] w-full max-w-xl p-10 shadow-2xl animate-in zoom-in-95 duration-300 border border-white/20">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-                  {editingId ? 'Update Appointment' : 'New Appointment Type'}
-                </h2>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-6 h-6 text-slate-400"/></button>
+        {activeTab === 'BOOKINGS' && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fade-in">
+            <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-slate-900">View All Meetings</h2>
+              <div className="flex gap-4">
+                <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl">All Time</button>
+                <button className="px-4 py-2 bg-white border border-slate-200 text-slate-500 text-sm font-bold rounded-xl hover:bg-slate-50">Upcoming</button>
               </div>
-              
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Title</label>
-                  <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-600 transition-all font-bold" required placeholder="e.g. Brainstorming Session" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Duration (Min)</label>
-                    <input type="number" value={formData.duration_minutes} onChange={e => setFormData({...formData, duration_minutes: parseInt(e.target.value)})} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-600 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Booking Fee ($)</label>
-                    <input type="number" step="0.01" value={formData.booking_fee} onChange={e => setFormData({...formData, booking_fee: e.target.value})} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-600 font-bold" />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Location / Venue</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-300" />
-                    <input value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-600 font-bold" placeholder="Room Number or URL" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                   <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <input type="checkbox" checked={formData.manual_confirmation} onChange={e => setFormData({...formData, manual_confirmation: e.target.checked})} className="w-5 h-5 accent-indigo-600 rounded-lg" />
-                      <span className="text-[10px] font-black text-slate-500 uppercase leading-none">Manual Confirmation</span>
-                   </div>
-                   <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <input type="checkbox" checked={formData.is_published} onChange={e => setFormData({...formData, is_published: e.target.checked})} className="w-5 h-5 accent-indigo-600 rounded-lg" />
-                      <span className="text-[10px] font-black text-slate-500 uppercase leading-none">Live / Published</span>
-                   </div>
-                </div>
-
-                <button 
-                  type="submit" 
-                  disabled={isLoading}
-                  className="w-full py-5 bg-slate-900 text-white font-black rounded-3xl shadow-2xl hover:bg-indigo-600 transition-all uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3"
-                >
-                  {isLoading ? "Processing..." : (editingId ? <><Edit3 className="w-4 h-4"/> Update Appointment</> : <><Save className="w-4 h-4"/> Create Appointment Type</>)}
-                </button>
-              </form>
+              <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-3 top-2.5 w-5 h-5 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Filter by customer..." 
+                  className="pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600 w-full sm:w-64"
+                />
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50/50">
+                  <tr className="text-left text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Time</th>
+                    <th className="px-6 py-4">Resource</th>
+                    <th className="px-6 py-4">Answers</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {MOCK_APPOINTMENTS.map((apt) => (
+                    <tr key={apt.id} className="text-sm hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-900">{apt.userName}</td>
+                      <td className="px-6 py-4">
+                        <div className="text-slate-900 font-medium">{apt.date}</div>
+                        <div className="text-slate-400 text-[10px]">{apt.timeSlot}</div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">{apt.providerName}</td>
+                      <td className="px-6 py-4 text-slate-600">+919876543210</td>
+                      <td className="px-6 py-4">
+                        <select 
+                          className={`px-2 py-1 rounded-full text-[10px] font-bold border-none outline-none ${
+                            apt.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' : 
+                            apt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-slate-100 text-slate-500'
+                          }`}
+                          defaultValue={apt.status}
+                        >
+                          <option value="CONFIRMED">Booked</option>
+                          <option value="PENDING">Request</option>
+                          <option value="CANCELLED">Cancelled</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="text-indigo-600 font-bold hover:underline text-sm">Manage</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
-        {activeTab === 'DASHBOARD' && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-             {/* Original KPI cards code here... */}
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Use the KPI card mapping from your previous code */}
-             </div>
-             {/* Charts Row here... */}
+        {(activeTab === 'CALENDAR' || activeTab === 'SETTINGS') && (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 animate-fade-in">
+            <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-400 mb-6">
+              <Settings className="w-10 h-10" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Feature Coming Soon</h2>
+            <p className="text-slate-500 max-w-sm text-center mt-2">This feature is currently under development.</p>
+          </div>
+        )}
+
+        {/* Share Link Modal */}
+        {shareLinkVisible && selectedService && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShareLinkVisible(false)}>
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-900">Share Service</h3>
+                <button onClick={() => setShareLinkVisible(false)} className="p-1 hover:bg-slate-100 rounded">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Share Link</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={generateShareLink()}
+                      readOnly
+                      className="flex-1 px-4 py-2 border border-slate-200 rounded-xl bg-slate-50 text-sm"
+                    />
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(generateShareLink());
+                        alert('Link copied to clipboard!');
+                      }}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+                      title="Copy link"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedService.published !== false}
+                    onChange={() => {}}
+                    className="w-4 h-4 text-indigo-600 rounded"
+                    disabled
+                  />
+                  <span className="text-sm text-slate-700">Can share unpublished appointment</span>
+                </label>
+                <div className="pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => setShareLinkVisible(false)}
+                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Service Configuration Modal */}
+        {isEditingService && selectedService && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-bold text-slate-900">Appointment Title</h2>
+                  <input 
+                    type="text" 
+                    value={serviceForm.name || selectedService.name}
+                    onChange={(e) => setServiceForm({...serviceForm, name: e.target.value})}
+                    className="text-xl font-bold border-none outline-none bg-transparent focus:ring-2 focus:ring-indigo-100 rounded px-2"
+                    placeholder="Service name"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50">
+                    Preview
+                  </button>
+                  <button 
+                    onClick={() => handleTogglePublish(selectedService.id)}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold ${
+                      serviceForm.published 
+                        ? 'bg-green-600 text-white hover:bg-green-700' 
+                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                    }`}
+                  >
+                    {serviceForm.published ? 'Published' : 'Publish'}
+                  </button>
+                  <button 
+                    onClick={() => setIsEditingService(false)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Configuration Tabs */}
+              <div className="border-b border-slate-100 px-6 shrink-0">
+                <div className="flex gap-1">
+                  {(['BASIC', 'SCHEDULE', 'QUESTIONS', 'OPTIONS', 'MESSAGES'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setConfigTab(tab)}
+                      className={`px-4 py-3 text-sm font-bold transition-colors border-b-2 ${
+                        configTab === tab
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      {tab.charAt(0) + tab.slice(1).toLowerCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {configTab === 'BASIC' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Left Column */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Duration</label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="text" 
+                              value={serviceForm.duration ? `${String(Math.floor(serviceForm.duration / 60)).padStart(2, '0')}:${String(serviceForm.duration % 60).padStart(2, '0')}` : '00:30'}
+                              onChange={(e) => {
+                                const [hours, minutes] = e.target.value.split(':').map(Number);
+                                setServiceForm({...serviceForm, duration: (hours || 0) * 60 + (minutes || 0)});
+                              }}
+                              className="w-24 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                              placeholder="00:30"
+                            />
+                            <span className="text-sm text-slate-500">Hours</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Location</label>
+                          <input 
+                            type="text" 
+                            value={serviceForm.location || selectedService.location}
+                            onChange={(e) => setServiceForm({...serviceForm, location: e.target.value})}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                            placeholder="Doctor's Office"
+                          />
+                          <p className="text-xs text-slate-400 mt-1">If Location is not set, consider it an Online Appointment</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-400 mb-3">Book</label>
+                          <div className="flex gap-4 mb-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="bookType"
+                                checked={serviceForm.bookType === 'USER'}
+                                onChange={() => setServiceForm({...serviceForm, bookType: 'USER'})}
+                                className="w-4 h-4 text-indigo-600"
+                              />
+                              <span className="text-sm font-medium">User</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="bookType"
+                                checked={serviceForm.bookType === 'RESOURCE'}
+                                onChange={() => setServiceForm({...serviceForm, bookType: 'RESOURCE'})}
+                                className="w-4 h-4 text-indigo-600"
+                              />
+                              <span className="text-sm font-medium">Resources</span>
+                            </label>
+                          </div>
+
+                          {serviceForm.bookType === 'USER' && (
+                            <div className="space-y-2">
+                              <label className="block text-xs text-slate-500 mb-2">Users</label>
+                              <div className="flex flex-wrap gap-2">
+                                {selectedService.providers.map((provider, idx) => (
+                                  <button
+                                    key={idx}
+                                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                                  >
+                                    {provider} <span className="text-xs text-slate-400">A{idx + 1}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {serviceForm.bookType === 'RESOURCE' && (
+                            <div className="space-y-2">
+                              <label className="block text-xs text-slate-500 mb-2">Resources</label>
+                              <div className="flex flex-wrap gap-2">
+                                {['Resource 1', 'Resource 2'].map((resource, idx) => (
+                                  <button
+                                    key={idx}
+                                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                                  >
+                                    {resource} <span className="text-xs text-slate-400">R{idx + 1}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-400 mb-3">Assignment</label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="assignment"
+                                checked={serviceForm.assignmentType === 'AUTO'}
+                                onChange={() => setServiceForm({...serviceForm, assignmentType: 'AUTO'})}
+                                className="w-4 h-4 text-indigo-600"
+                              />
+                              <span className="text-sm font-medium">Automatically</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="assignment"
+                                checked={serviceForm.assignmentType === 'MANUAL'}
+                                onChange={() => setServiceForm({...serviceForm, assignmentType: 'MANUAL'})}
+                                className="w-4 h-4 text-indigo-600"
+                              />
+                              <span className="text-sm font-medium">By visitor</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={serviceForm.manageCapacity || false}
+                              onChange={(e) => setServiceForm({...serviceForm, manageCapacity: e.target.checked})}
+                              className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <span className="text-sm text-slate-700">Manage capacity</span>
+                          </label>
+                          {serviceForm.manageCapacity && (
+                            <div className="mt-2">
+                              <input 
+                                type="number" 
+                                value={serviceForm.maxBookingsPerSlot || ''}
+                                onChange={(e) => setServiceForm({...serviceForm, maxBookingsPerSlot: parseInt(e.target.value)})}
+                                className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600 mt-2"
+                                placeholder="Allow Simultaneous Appointment(s) per user"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right Column - Picture */}
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Picture</label>
+                        <div className="w-full h-48 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-indigo-300 transition-colors cursor-pointer">
+                          {serviceForm.picture ? (
+                            <img src={serviceForm.picture} alt="Service" className="w-full h-full object-cover rounded-xl" />
+                          ) : (
+                            <>
+                              <ImageIcon className="w-12 h-12 text-slate-400" />
+                              <span className="text-sm text-slate-500">Click to upload</span>
+                            </>
+                          )}
+                          <div className="flex gap-2">
+                            <button className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg">
+                              <Upload className="w-4 h-4" />
+                            </button>
+                            {serviceForm.picture && (
+                              <button 
+                                onClick={() => setServiceForm({...serviceForm, picture: undefined})}
+                                className="p-2 bg-red-100 hover:bg-red-200 rounded-lg"
+                              >
+                                <X className="w-4 h-4 text-red-600" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {configTab === 'SCHEDULE' && (
+                  <div className="space-y-4">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Every</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">From</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">To</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {DAYS_OF_WEEK.map(day => (
+                            <React.Fragment key={day}>
+                              {(workingHours[day] || []).length > 0 ? (
+                                workingHours[day].map((slot, idx) => (
+                                  <tr key={slot.id}>
+                                    {idx === 0 && (
+                                      <td rowSpan={workingHours[day].length} className="px-4 py-3 text-sm font-medium text-slate-900 align-top">
+                                        {day}
+                                      </td>
+                                    )}
+                                    <td className="px-4 py-3">
+                                      <input
+                                        type="time"
+                                        value={slot.from}
+                                        onChange={(e) => {
+                                          const updated = workingHours[day].map(s => 
+                                            s.id === slot.id ? {...s, from: e.target.value} : s
+                                          );
+                                          setWorkingHours({...workingHours, [day]: updated});
+                                        }}
+                                        className="px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-600"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <input
+                                        type="time"
+                                        value={slot.to}
+                                        onChange={(e) => {
+                                          const updated = workingHours[day].map(s => 
+                                            s.id === slot.id ? {...s, to: e.target.value} : s
+                                          );
+                                          setWorkingHours({...workingHours, [day]: updated});
+                                        }}
+                                        className="px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-600"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <button
+                                        onClick={() => handleRemoveTimeSlot(day, slot.id)}
+                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td className="px-4 py-3 text-sm font-medium text-slate-900">{day}</td>
+                                  <td colSpan={3} className="px-4 py-3">
+                                    <button
+                                      onClick={() => handleAddTimeSlot(day)}
+                                      className="text-indigo-600 text-sm font-medium hover:underline"
+                                    >
+                                      Add time slot
+                                    </button>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <button
+                      onClick={() => {
+                        DAYS_OF_WEEK.forEach(day => {
+                          if (!workingHours[day] || workingHours[day].length === 0) {
+                            handleAddTimeSlot(day);
+                          }
+                        });
+                      }}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700"
+                    >
+                      Add a line
+                    </button>
+                  </div>
+                )}
+
+                {configTab === 'QUESTIONS' && (
+                  <div className="space-y-6">
+                    {/* Existing Questions Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Question</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Answer type</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Mandatory</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {questions.map(q => (
+                            <tr key={q.id}>
+                              <td className="px-4 py-3 text-sm text-slate-900">{q.label}</td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {QUESTION_TYPES.find(t => t.value === q.type)?.label || q.type}
+                              </td>
+                              <td className="px-4 py-3">
+                                <input type="checkbox" checked={q.required} disabled className="w-4 h-4 text-indigo-600 rounded" />
+                              </td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={() => handleRemoveQuestion(q.id)}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {questions.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-sm">
+                                No questions added yet
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Add Question Form */}
+                    <div className="border-t border-slate-200 pt-6 space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900">Add a question</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Answer type</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {QUESTION_TYPES.map(type => (
+                              <button
+                                key={type.value}
+                                onClick={() => setNewQuestion({...newQuestion, type: type.value, options: (type.value === 'radio' || type.value === 'checkbox') ? ['Option 1'] : undefined})}
+                                className={`px-3 py-2 border rounded-xl text-xs font-medium transition-colors ${
+                                  newQuestion.type === type.value
+                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                                    : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+                                }`}
+                              >
+                                {type.label}
+                              </button>
+                            ))}
+                          </div>
+                          {(newQuestion.type === 'radio' || newQuestion.type === 'checkbox') && (
+                            <div className="mt-4 space-y-2">
+                              <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Options</label>
+                              {(newQuestion.options || []).map((opt, idx) => (
+                                <div key={idx} className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const updated = [...(newQuestion.options || [])];
+                                      updated[idx] = e.target.value;
+                                      setNewQuestion({...newQuestion, options: updated});
+                                    }}
+                                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-600 text-sm"
+                                    placeholder={`Option ${idx + 1}`}
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const updated = (newQuestion.options || []).filter((_, i) => i !== idx);
+                                      setNewQuestion({...newQuestion, options: updated});
+                                    }}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => setNewQuestion({...newQuestion, options: [...(newQuestion.options || []), `Option ${(newQuestion.options?.length || 0) + 1}`]})}
+                                className="text-sm text-indigo-600 font-medium hover:underline"
+                              >
+                                + Add Option
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Question</label>
+                            <input
+                              type="text"
+                              value={newQuestion.label || ''}
+                              onChange={(e) => setNewQuestion({...newQuestion, label: e.target.value})}
+                              className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                              placeholder="Anything else we should know?"
+                            />
+                          </div>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newQuestion.required || false}
+                              onChange={(e) => setNewQuestion({...newQuestion, required: e.target.checked})}
+                              className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <span className="text-sm text-slate-700">Mandatory Answer</span>
+                          </label>
+                          <button
+                            onClick={handleAddQuestion}
+                            disabled={!newQuestion.label || ((newQuestion.type === 'radio' || newQuestion.type === 'checkbox') && (!newQuestion.options || newQuestion.options.length === 0))}
+                            className="w-full px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Add Question
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {configTab === 'OPTIONS' && (
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={serviceForm.manualConfirmation || false}
+                          onChange={(e) => setServiceForm({...serviceForm, manualConfirmation: e.target.checked})}
+                          className="w-4 h-4 text-indigo-600 rounded"
+                        />
+                        <span className="text-sm text-slate-700">Manual confirmation</span>
+                        {serviceForm.manualConfirmation && (
+                          <span className="text-xs text-slate-500">Upto 50% of capacity</span>
+                        )}
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={serviceForm.advancePayment || false}
+                          onChange={(e) => setServiceForm({...serviceForm, advancePayment: e.target.checked})}
+                          className="w-4 h-4 text-indigo-600 rounded"
+                        />
+                        <span className="text-sm text-slate-700">Paid Booking</span>
+                        {serviceForm.advancePayment && (
+                          <div className="ml-4">
+                            <span className="text-xs text-slate-500">Booking Fees (Rs </span>
+                            <input
+                              type="number"
+                              value={serviceForm.price || 0}
+                              onChange={(e) => setServiceForm({...serviceForm, price: parseFloat(e.target.value)})}
+                              className="w-20 px-2 py-1 border border-slate-200 rounded text-xs inline-block"
+                            />
+                            <span className="text-xs text-slate-500"> Per booking)</span>
+                          </div>
+                        )}
+                      </label>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Create Slot</label>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="text" 
+                            value={serviceForm.slotCreation || String(selectedService.duration)}
+                            onChange={(e) => setServiceForm({...serviceForm, slotCreation: e.target.value})}
+                            className="w-24 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                            placeholder="00:30"
+                          />
+                          <span className="text-sm text-slate-500">hours</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Cancellation</label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-500">up to</span>
+                          <input 
+                            type="number" 
+                            value={serviceForm.cancellationHours || 1}
+                            onChange={(e) => setServiceForm({...serviceForm, cancellationHours: parseInt(e.target.value)})}
+                            className="w-20 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                          />
+                          <span className="text-sm text-slate-500">hour(s) before the booking</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {configTab === 'MESSAGES' && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Introduction page message</label>
+                      <textarea
+                        value={serviceForm.introductionMessage || ''}
+                        onChange={(e) => setServiceForm({...serviceForm, introductionMessage: e.target.value})}
+                        rows={4}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                        placeholder="Schedule your visit today and experience expert dental care brought right to your doorstep."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Confirmation page message</label>
+                      <textarea
+                        value={serviceForm.confirmationMessage || ''}
+                        onChange={(e) => setServiceForm({...serviceForm, confirmationMessage: e.target.value})}
+                        rows={4}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                        placeholder="Thank you for your trust we look forward to meeting you"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+                <button 
+                  onClick={() => setIsEditingService(false)}
+                  className="px-6 py-2 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSaveService}
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -315,8 +1067,4 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
   );
 };
 
-export default AdminPortal;
-
-function setShowAddServiceModal(arg0: boolean) {
-  throw new Error('Function not implemented.');
-}
+export default OrganiserPortal;

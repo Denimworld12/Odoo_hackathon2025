@@ -3,6 +3,8 @@ const cors = require('cors');
 require('dotenv').config();
 const {pool} = require('./config/db');
 const {userRouter} = require('./routes/user.routes');
+const bookingRoutes = require("./routes/bookings.routes");
+const {appointmentRouter} = require("./routes/appointment.routes");
 
 const app = express();
 app.use(cors());
@@ -38,7 +40,8 @@ app.get("/test-db", async (req, res) => {
 });
 
 app.use("/api/users", userRouter);
-app.use("/api/appointments", require("./routes/appointment.routes").appointmentRouter);
+app.use("/api/appointments",appointmentRouter);
+app.use("/api/bookings", bookingRoutes);
 app.listen(5000, ()=>{
     console.log('server is running on port 3000');  
 })

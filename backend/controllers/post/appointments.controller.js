@@ -8,7 +8,7 @@ const createService = async (req, res) => {
     booking_fee, manual_confirmation, is_published, 
     target_type, assignment_type 
   } = req.body;
-  const organiser_id = req.user.id; // From Auth Middleware
+  const organiser_id = req.user_id; // From Auth Middleware
 
   try {
     const result = await pool.query(

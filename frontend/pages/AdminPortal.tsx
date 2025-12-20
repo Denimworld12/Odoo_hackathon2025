@@ -31,6 +31,17 @@ const COLORS = ['#6366f1', '#3b82f6', '#8b5cf6', '#ec4899'];
 const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'SERVICES' | 'BOOKINGS' | 'USERS' | 'REPORTS'>('DASHBOARD');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+
+const [newService, setNewService] = useState({
+  title: "",
+  description: "",
+  location: "",
+  duration_minutes: 30,
+  booking_fee: 0
+});
+
+const [isSaving, setIsSaving] = useState(false);
 
   const NavItem = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
     <button
@@ -43,6 +54,50 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
       {sidebarOpen && <span>{label}</span>}
     </button>
   );
+
+
+  const handleCreateService = async () => {
+  try {
+    setIsSaving(true);
+
+    const res = await fetch(
+      "http://localhost:5000/api/appointments/create-appointment",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: newService.title,
+          description: newService.description,
+          location: newService.location,
+          duration_minutes: Number(newService.duration_minutes),
+          booking_fee: Number(newService.booking_fee),
+          is_published: true
+        })
+      }
+    );
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to create service");
+
+    setShowAddServiceModal(false);
+    setNewService({
+      title: "",
+      description: "",
+      location: "",
+      duration_minutes: 30,
+      booking_fee: 0
+    });
+
+    alert("Service created successfully");
+  } catch (err: any) {
+    alert(err.message);
+  } finally {
+    setIsSaving(false);
+  }
+};
+
 
   return (
     <div className="flex h-[calc(100vh-24px)] overflow-hidden">
@@ -76,6 +131,98 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
           </div>
         </div>
       </aside>
+
+
+      {showAddServiceModal && (
+  <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl animate-in fade-in zoom-in-95">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-slate-900">Add New Service</h2>
+        <button onClick={() => setShowAddServiceModal(false)}>
+          <X className="w-5 h-5 text-slate-400" />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <input
+          type="text"
+          placeholder="Service Title"
+          value={newService.title}
+          onChange={(e) =>
+            setNewService({ ...newService, title: e.target.value })
+          }
+          className="w-full border rounded-xl px-4 py-2"
+        />
+
+        <textarea
+          placeholder="Description"
+          value={newService.description}
+          onChange={(e) =>
+            setNewService({ ...newService, description: e.target.value })
+          }
+          className="w-full border rounded-xl px-4 py-2"
+          rows={3}
+        />
+
+        <input
+          type="text"
+          placeholder="Location"
+          value={newService.location}
+          onChange={(e) =>
+            setNewService({ ...newService, location: e.target.value })
+          }
+          className="w-full border rounded-xl px-4 py-2"
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <input
+            type="number"
+            placeholder="Duration (mins)"
+            value={newService.duration_minutes}
+            onChange={(e) =>
+              setNewService({
+                ...newService,
+                duration_minutes: e.target.value
+              })
+            }
+            className="border rounded-xl px-4 py-2"
+          />
+
+          <input
+            type="number"
+            placeholder="Price"
+            value={newService.booking_fee}
+            onChange={(e) =>
+              setNewService({
+                ...newService,
+                booking_fee: e.target.value
+              })
+            }
+            className="border rounded-xl px-4 py-2"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          onClick={() => setShowAddServiceModal(false)}
+          className="px-4 py-2 rounded-xl border border-slate-200 font-bold"
+        >
+          Cancel
+        </button>
+
+        <button
+          disabled={isSaving}
+          onClick={handleCreateService}
+          className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold disabled:opacity-50"
+        >
+          {isSaving ? "Saving..." : "Create Service"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto bg-slate-50 p-6 sm:p-10">
@@ -244,8 +391,11 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ user, onLogout }) => {
                   className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-600 shadow-sm"
                 />
               </div>
-              <button className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-100">
-                <PlusCircle className="w-5 h-5" /> Add Service
+              <button
+  onClick={() => setShowAddServiceModal(true)}
+  className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-100"
+>
+ Service
               </button>
             </div>
 

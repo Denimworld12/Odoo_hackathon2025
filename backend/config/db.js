@@ -1,12 +1,21 @@
-import mysql from "mysql2/promise";
+const pkg = require('pg');
+const { Pool } = pkg;
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10
+ const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, // REQUIRED for Render
+  },
 });
 
-export default pool;
+module.exports = { pool };
+
+(async () => {
+  try {
+    const res = await pool.query("SELECT NOW()");
+    console.log("DB connected at:", res.rows[0].now);
+  } catch (err) {
+    console.error("DB connection failed:", err);
+  }
+})();
+

@@ -11,7 +11,7 @@ const createBooking = async (req, res) => {
     assigned_user_id,
     start_time,
     end_time
-  } = req.body;
+  } = req.body; 
 
   try {
     const result = await pool.query(
@@ -49,9 +49,35 @@ const createBooking = async (req, res) => {
  */
 const getAllBookings = async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT * FROM bookings ORDER BY created_at DESC`
-    );
+    const { organiser_id } = req.query;
+    
+    let query = `
+      SELECT 
+        b.id,
+        b.appointment_type_id,
+        b.customer_id,
+        b.resource_id,
+        b.assigned_user_id,
+        b.start_time,
+        b.end_time,
+        b.status,
+        b.payment_status,
+        b.created_at,
+        b.payment_id,
+        at.title AS service_name,
+        at.location,
+        at.duration_minutes,
+        at.booking_fee,
+        u.full_name AS customer_name,
+        u2.full_name AS provider_name
+      FROM bookings b
+      LEFT JOIN appointment_types at ON b.appointment_type_id = at.id
+      LEFT JOIN users u ON b.customer_id = u.id
+      LEFT JOIN users u2 ON b.assigned_user_id = u2.id
+      ORDER BY b.created_at DESC
+    `;
+    
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
     console.error("Get bookings error:", err);

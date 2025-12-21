@@ -39,6 +39,9 @@ RAZORPAY_KEY_SECRET=
 ###
 <img width="1864" height="996" alt="image" src="https://github.com/user-attachments/assets/ecd2dc55-3f24-4179-ac5b-768cce6c74fd" />
 ###
+
+<img width="962" height="759" alt="image" src="https://github.com/user-attachments/assets/0de025b1-e22a-4f26-9ad1-3d1db60e9ca8" />
+
 <img width="1865" height="996" alt="image" src="https://github.com/user-attachments/assets/875e0ac1-0d8f-4ea9-8ef8-ee5e081bdf0c" />
 ###
 <img width="1849" height="1005" alt="image" src="https://github.com/user-attachments/assets/0ddaad8c-a5f8-4625-9fb8-fe4627b956a0" />

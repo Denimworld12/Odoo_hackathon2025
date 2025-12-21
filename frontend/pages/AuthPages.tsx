@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Role } from "../types";
+import React, { useState, FormEvent, ChangeEvent } from "react";
+import { Role, User } from "../types";
 import {
   ShieldCheck,
   Mail,
@@ -25,9 +25,16 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Define API response types
+  interface ApiResponse {
+    message?: string;
+    token?: string;
+    user?: User;
+  }
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
@@ -45,8 +52,10 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
           })
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Signup failed");
+        const data: ApiResponse = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Signup failed");
+        }
 
         alert("Account created. Please login.");
         setStep("LOGIN");
@@ -60,12 +69,14 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
           body: JSON.stringify({ email, password })
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Login failed");
+        const data: ApiResponse = await res.json();
+        if (!res.ok || !data.token || !data.user) {
+          throw new Error(data.message || "Login failed");
+        }
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-        onLogin(data.user.role);
+        onLogin(data.user.role as Role);
       }
 
       /* ================= FORGOT PASSWORD ================= */
@@ -76,8 +87,10 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
           body: JSON.stringify({ email })
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to send OTP");
+        const data: ApiResponse = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to send OTP");
+        }
 
         alert("OTP sent to your email");
         setStep("RESET");
@@ -85,6 +98,10 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
 
       /* ================= RESET PASSWORD ================= */
       if (step === "RESET") {
+        if (!otp || !newPassword) {
+          throw new Error("OTP and new password are required");
+        }
+
         const res = await fetch(`${API_BASE}/users/reset-password`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -95,14 +112,17 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
           })
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Reset failed");
+        const data: ApiResponse = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Password reset failed");
+        }
 
         alert("Password reset successful");
         setStep("LOGIN");
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +159,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
                 type="text"
                 required
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
                 placeholder="Full Name"
                 className="w-full pl-11 pr-4 py-3 border rounded-xl"
               />
@@ -153,7 +173,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 placeholder="Email"
                 className="w-full pl-11 pr-4 py-3 border rounded-xl"
               />
@@ -167,7 +187,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 placeholder="Password"
                 className="w-full pl-11 pr-4 py-3 border rounded-xl"
               />
@@ -182,7 +202,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
                   type="text"
                   required
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setOtp(e.target.value)}
                   placeholder="OTP"
                   className="w-full pl-11 pr-4 py-3 border rounded-xl"
                 />
@@ -194,7 +214,7 @@ const AuthPages: React.FC<AuthPagesProps> = ({ step, setStep, onLogin }) => {
                   type="password"
                   required
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
                   placeholder="New Password"
                   className="w-full pl-11 pr-4 py-3 border rounded-xl"
                 />

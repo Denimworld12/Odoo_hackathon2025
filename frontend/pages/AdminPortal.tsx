@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { User, Service, Provider, Appointment, Question, TimeSlotRange } from '../types';
 import { 
   Calendar, Clock, Settings, LogOut, Search, PlusCircle, Edit3, Trash2, 
   Check, X, Eye, Share2, Save, ChevronRight, BarChart3, Users, EyeOff, 
-  Upload, Image as ImageIcon, ArrowRight, Copy, CheckCircle2
+  Upload, Image as ImageIcon, ArrowRight, Copy, CheckCircle2, Loader2
 } from 'lucide-react';
-import { MOCK_SERVICES, MOCK_PROVIDERS, MOCK_APPOINTMENTS } from '../constants';
+import { MOCK_PROVIDERS, MOCK_APPOINTMENTS } from '../constants';
 
 interface OrganiserPortalProps {
   user: User;
@@ -22,25 +22,168 @@ const QUESTION_TYPES: Array<{value: Question['type'], label: string}> = [
   { value: 'number', label: 'Number' },
 ];
 
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+interface TimeSlot {
+  id: string;
+  from: string;
+  to: string;
+  enabled: boolean;
+}
+
+interface ServiceForm extends Partial<Service> {
+  bookType?: 'USER' | 'RESOURCE';
+  assignmentType?: 'AUTO' | 'MANUAL';
+  manageCapacity?: boolean;
+  maxBookingsPerSlot?: number;
+  slotCreation?: string;
+  cancellationHours?: number;
+  introductionMessage?: string;
+  confirmationMessage?: string;
+  picture?: string;
+  workingHours?: Record<string, TimeSlot[]>;
+}
+
+const NavItem: React.FC<{
+  id: 'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS';
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  activeTab: string;
+  onClick: (id: 'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS') => void;
+}> = ({ id, icon: Icon, label, activeTab, onClick }) => (
+  <button
+    onClick={() => onClick(id)}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+      activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+    }`}
+  >
+    <Icon className="w-5 h-5" />
+    {label}
+  </button>
+);
+
 const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS'>('SERVICES');
-  const [services, setServices] = useState<Service[]>(MOCK_SERVICES);
+  const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isEditingService, setIsEditingService] = useState(false);
   const [configTab, setConfigTab] = useState<'BASIC' | 'SCHEDULE' | 'QUESTIONS' | 'OPTIONS' | 'MESSAGES'>('BASIC');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shareLinkVisible, setShareLinkVisible] = useState(false);
-  const [newQuestion, setNewQuestion] = useState<Partial<Question>>({ type: 'text', required: false });
+  const [newQuestion, setNewQuestion] = useState<Omit<Question, 'id'>>({ 
+    type: 'text', 
+    label: '',
+    required: false,
+    options: []
+  } as const);
   const [previewMode, setPreviewMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Form state for service configuration
-  const [serviceForm, setServiceForm] = useState<Partial<Service>>({});
-  const [workingHours, setWorkingHours] = useState<Record<string, TimeSlotRange[]>>({});
+  const [serviceForm, setServiceForm] = useState<ServiceForm>({});
+  const [workingHours, setWorkingHours] = useState<Record<string, TimeSlot[]>>({});
   const [questions, setQuestions] = useState<Question[]>([]);
   const API_BASE = "http://localhost:5000/api";
 
+  // Fetch organizer's appointments on mount
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setIsFetching(true);
+        const storedUser = localStorage.getItem('user');
+        if (!storedUser) return;
+        
+        const userData = JSON.parse(storedUser);
+        const res = await fetch(`${API_BASE}/appointments/organiser/${userData.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          }
+        });
 
-  const NavItem = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
+        if (!res.ok) {
+          throw new Error('Failed to fetch services');
+        }
+
+        const data = await res.json();
+        
+        // Convert backend format to frontend Service format
+        const dayNumberToName: Record<number, string> = {
+          0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+          4: 'Thursday', 5: 'Friday', 6: 'Saturday'
+        };
+
+        const convertedServices: Service[] = (data.appointments || []).map((apt: any) => {
+          // Convert schedules to workingHours format
+          const workingHrs: Record<string, TimeSlot[]> = {};
+          (apt.schedules || []).forEach((sch: any) => {
+            const dayName = dayNumberToName[sch.day_of_week] || 'Monday';
+            if (!workingHrs[dayName]) workingHrs[dayName] = [];
+            workingHrs[dayName].push({
+              id: sch.id,
+              from: sch.start_time?.substring(0, 5) || '09:00',
+              to: sch.end_time?.substring(0, 5) || '17:00',
+              enabled: true
+            });
+          });
+
+          // Convert questions
+          const qs: Question[] = (apt.questions || []).map((q: any) => ({
+            id: q.id,
+            label: q.label,
+            type: q.field_type?.toLowerCase() || 'text',
+            required: q.is_mandatory,
+            options: []
+          }));
+
+          return {
+            id: apt.id,
+            name: apt.title,
+            description: apt.description || '',
+            duration: apt.duration_minutes,
+            price: Number(apt.booking_fee || 0),
+            icon: '📅',
+            location: apt.location || '',
+            type: Number(apt.booking_fee) > 0 ? 'Paid' : 'Free',
+            providers: [],
+            published: apt.is_published,
+            bookType: apt.target_type || 'USER',
+            assignmentType: apt.assignment_type === 'AUTOMATIC' ? 'AUTO' : 'MANUAL',
+            questions: qs,
+            workingHours: workingHrs
+          };
+        });
+
+        setServices(convertedServices);
+      } catch (err) {
+        console.error('Error fetching services:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch services');
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  const handleTabChange = useCallback((tab: 'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS') => {
+    setActiveTab(tab);
+  }, []);
+
+  const handleConfigTabChange = useCallback((tab: 'BASIC' | 'SCHEDULE' | 'QUESTIONS' | 'OPTIONS' | 'MESSAGES') => {
+    setConfigTab(tab);
+  }, []);
+
+  const NavItem: React.FC<{
+    id: 'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS';
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+  }> = ({ id, icon: Icon, label }) => (
     <button
       onClick={() => setActiveTab(id)}
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
@@ -52,19 +195,68 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
     </button>
   );
 
-  const handleTogglePublish = (serviceId: string) => {
-    setServices(prev => prev.map(s => 
-      s.id === serviceId ? { ...s, published: !s.published } : s
-    ));
-  };
+  const handleTogglePublish = useCallback(async (serviceId: string) => {
+    try {
+      setIsLoading(true);
+      const service = services.find(s => s.id === serviceId);
+      if (!service) return;
 
-  const handleDeleteService = (serviceId: string) => {
-    if (confirm('Are you sure you want to delete this service?')) {
-      setServices(prev => prev.filter(s => s.id !== serviceId));
+      const published = !service.published;
+      const res = await fetch(`${API_BASE}/services/${serviceId}/publish`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({ published })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update service status');
+      }
+
+      setServices(prev => prev.map(s => 
+        s.id === serviceId ? { ...s, published } : s
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error updating service status:', err);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [services]);
 
-  const handleEditService = (service: Service) => {
+  const handleDeleteService = useCallback(async (serviceId: string) => {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+    
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_BASE}/appointments/services/${serviceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete service');
+      }
+
+      setServices(prev => prev.filter(s => s.id !== serviceId));
+      if (selectedService?.id === serviceId) {
+        setSelectedService(null);
+        setIsEditingService(false);
+      }
+      alert('Service deleted successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error deleting service:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedService]);
+
+  const handleEditService = useCallback((service: Service) => {
     setSelectedService(service);
     setServiceForm({
       ...service,
@@ -74,17 +266,19 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
       cancellationHours: service.cancellationHours || 1,
       introductionMessage: service.introductionMessage || '',
       confirmationMessage: service.confirmationMessage || '',
-      picture: service.picture || undefined,
+      picture: service.picture,
+      questions: service.questions || [],
+      workingHours: service.workingHours || {}
     });
     setQuestions(service.questions || []);
     setWorkingHours(service.workingHours || {});
     setIsEditingService(true);
     setConfigTab('BASIC');
     setShareLinkVisible(false);
-  };
+  }, []);
 
-  const handleAddTimeSlot = (day: string) => {
-    const newSlot: TimeSlotRange = {
+  const handleAddTimeSlot = useCallback((day: string) => {
+    const newSlot: TimeSlot = {
       id: Date.now().toString(),
       from: '09:00',
       to: '17:00',
@@ -94,115 +288,174 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
       ...prev,
       [day]: [...(prev[day] || []), newSlot],
     }));
-  };
+  }, []);
 
-  const handleRemoveTimeSlot = (day: string, slotId: string) => {
+  const handleRemoveTimeSlot = useCallback((day: string, slotId: string) => {
     setWorkingHours(prev => ({
       ...prev,
       [day]: (prev[day] || []).filter(s => s.id !== slotId),
     }));
-  };
+  }, []);
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = useCallback(() => {
     if (newQuestion.label) {
       const question: Question = {
         id: Date.now().toString(),
         label: newQuestion.label,
-        type: newQuestion.type || 'text',
-        required: newQuestion.required || false,
+        type: newQuestion.type,
+        required: newQuestion.required,
         options: newQuestion.options || [],
       };
-      setQuestions([...questions, question]);
-      setNewQuestion({ type: 'text', required: false });
+      setQuestions(prev => [...prev, question]);
+      setNewQuestion({ 
+        type: 'text', 
+        label: '',
+        required: false, 
+        options: [] 
+      } as const);
     }
-  };
+  }, [newQuestion]);
 
-  const handleRemoveQuestion = (questionId: string) => {
-    setQuestions(questions.filter(q => q.id !== questionId));
-  };
+  const handleRemoveQuestion = useCallback((questionId: string) => {
+    setQuestions(prev => prev.filter(q => q.id !== questionId));
+  }, []);
 
-const handleSaveService = async () => {
-  if (!serviceForm.name || !serviceForm.duration) {
-    alert("Service name and duration are required");
-    return;
-  }
-
-
-  const payload = {
-    title: serviceForm.name,
-    description: serviceForm.description || "",
-    location: serviceForm.location || "",
-    duration_minutes: serviceForm.duration,
-    booking_fee: serviceForm.price || 0,
-    manual_confirmation: serviceForm.manualConfirmation ?? false,
-    is_published: serviceForm.published ?? false,
-    target_type: serviceForm.bookType || "USER",
-    assignment_type: serviceForm.assignmentType || "AUTOMATIC",
-    user_id: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}').id : null,
-  };
-
-  try {
-    const res = await fetch(
-      `${API_BASE}/appointments/services`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to create service");
+  const handleSaveService = useCallback(async () => {
+    if (!serviceForm.name || serviceForm.duration === undefined) {
+      alert("Service name and duration are required");
+      return;
     }
 
-    // ✅ DB SUCCESS → update UI from DB response
-    const createdService: Service = {
-      id: data.id,
-      name: data.title,
-      description: data.description,
-      duration: data.duration_minutes,
-      price: Number(data.booking_fee),
-      icon: "📅",
-      location: data.location,
-      type: Number(data.booking_fee) > 0 ? "Paid" : "Free",
-      providers: [],
-      published: data.is_published,
-      bookType: data.target_type,
-      assignmentType: data.assignment_type,
+    // Convert workingHours to schedules format for backend
+    // workingHours: { Monday: [{ id, from, to, enabled }], ... }
+    // schedules: [{ day_of_week: 0-6, start_time, end_time }]
+    const dayToNumber: Record<string, number> = {
+      'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+      'Thursday': 4, 'Friday': 5, 'Saturday': 6
     };
 
-    setServices((prev) => [...prev, createdService]);
+    const schedules: Array<{ day_of_week: number; start_time: string; end_time: string }> = [];
+    if (workingHours && typeof workingHours === 'object') {
+      Object.entries(workingHours).forEach(([day, slots]: [string, TimeSlot[]]) => {
+        if (Array.isArray(slots)) {
+          slots.forEach((slot: TimeSlot) => {
+            if (slot.enabled) {
+              schedules.push({
+                day_of_week: dayToNumber[day] ?? 0,
+                start_time: slot.from,
+                end_time: slot.to
+              });
+            }
+          });
+        }
+      });
+    }
 
-    alert("Service saved to database successfully ✅");
+    // Convert questions to backend format
+    // questions: [{ label, field_type, is_mandatory }]
+    // Map frontend types to database question_type enum values
+    const typeMapping: Record<string, string> = {
+      'text': 'TEXT',
+      'textarea': 'MULTI_LINE',
+      'phone': 'PHONE',
+      'radio': 'RADIO',
+      'checkbox': 'CHECKBOX',
+      'number': 'NUMBER'
+    };
+    const formattedQuestions = questions.map(q => ({
+      label: q.label,
+      field_type: typeMapping[q.type] || 'TEXT',
+      is_mandatory: q.required
+    }));
 
-    setIsEditingService(false);
-    setSelectedService(null);
-    setServiceForm({});
-  } catch (err: any) {
-    console.error(err);
-    alert(err.message);
-  }
-};
+    const payload = {
+      title: serviceForm.name,
+      description: serviceForm.description || "",
+      location: serviceForm.location || "",
+      duration_minutes: serviceForm.duration,
+      booking_fee: serviceForm.price || 0,
+      manual_confirmation: serviceForm.manualConfirmation ?? false,
+      is_published: serviceForm.published ?? false,
+      target_type: serviceForm.bookType || "USER",
+      assignment_type: serviceForm.assignmentType === 'AUTO' ? 'AUTOMATIC' : (serviceForm.assignmentType || "AUTOMATIC"),
+      user_id: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") || '{}').id : null,
+      schedules: schedules,
+      questions: formattedQuestions
+    };
 
+    try {
+      setIsLoading(true);
+      const res = await fetch(
+        `${API_BASE}/appointments/services`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-  const generateShareLink = () => {
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create service");
+      }
+
+      // Convert backend response back to frontend format
+      const createdService: Service = {
+        id: data.id,
+        name: data.title,
+        description: data.description || "",
+        duration: data.duration_minutes,
+        price: Number(data.booking_fee || 0),
+        icon: "📅",
+        location: data.location || "",
+        type: Number(data.booking_fee) > 0 ? "Paid" : "Free",
+        providers: [],
+        published: data.is_published,
+        bookType: data.target_type,
+        assignmentType: data.assignment_type === 'AUTOMATIC' ? 'AUTO' : 'MANUAL',
+        questions: (data.questions || []).map((q: any) => ({
+          id: q.id,
+          label: q.label,
+          type: q.field_type?.toLowerCase() || 'text',
+          required: q.is_mandatory
+        })),
+        workingHours: workingHours
+      };
+
+      setServices((prev) => [...prev, createdService]);
+
+      alert("Service saved to database successfully ✅");
+
+      setIsEditingService(false);
+      setSelectedService(null);
+      setServiceForm({});
+      setWorkingHours({});
+      setQuestions([]);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [serviceForm, workingHours, questions]);
+
+  const generateShareLink = useCallback(() => {
     if (selectedService) {
-      return `https://bookease.app/service/${selectedService.id}`;
+      return `${window.location.origin}/book/${selectedService.id}`;
     }
     return '';
-  };
+  }, [selectedService]);
 
   return (
     <div className="flex h-[calc(100vh-24px)] overflow-hidden bg-slate-50">
       {/* Sidebar */}
       <aside className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-6 flex items-center justify-between">
-          {sidebarOpen && <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">BookEase</div>}
+          {sidebarOpen && <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">Aarakshan</div>}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-slate-100 rounded">
             {sidebarOpen ? <X className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </button>

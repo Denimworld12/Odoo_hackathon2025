@@ -36,6 +36,68 @@ const getAllAppointments = async (req, res) => {
 };
 
 /**
+ * GET APPOINTMENT TYPES BY ORGANISER ID
+ * GET /api/appointments/organiser/:organiser_id
+ */
+const getAppointmentsByOrganiser = async (req, res) => {
+  const { organiser_id } = req.params;
+
+  try {
+    const appointmentsResult = await pool.query(
+      `
+      SELECT
+        at.id,
+        at.organiser_id,
+        at.title,
+        at.description,
+        at.location,
+        at.duration_minutes,
+        at.booking_fee,
+        at.manual_confirmation,
+        at.is_published,
+        at.target_type,
+        at.assignment_type,
+        at.profile_image
+      FROM public.appointment_types at
+      WHERE at.organiser_id = $1
+      ORDER BY at.title
+      `,
+      [organiser_id]
+    );
+
+    const appointmentsWithDetails = await Promise.all(
+      appointmentsResult.rows.map(async (apt) => {
+        const schedulesResult = await pool.query(
+          `SELECT * FROM schedules WHERE appointment_type_id = $1 ORDER BY day_of_week, start_time`,
+          [apt.id]
+        );
+        const questionsResult = await pool.query(
+          `SELECT * FROM custom_questions WHERE appointment_type_id = $1 ORDER BY sort_order`,
+          [apt.id]
+        );
+        return {
+          ...apt,
+          schedules: schedulesResult.rows,
+          questions: questionsResult.rows
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      count: appointmentsWithDetails.length,
+      appointments: appointmentsWithDetails
+    });
+  } catch (err) {
+    console.error("Get appointments by organiser error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch appointments"
+    });
+  }
+};
+
+/**
  * CREATE APPOINTMENT TYPE
  * POST /api/appointments
  */
@@ -186,7 +248,10 @@ const deleteAppointment = async (req, res) => {
   }
 };
 
-module.exports = { getAllAppointments,
+module.exports = { 
+  getAllAppointments,
+  getAppointmentsByOrganiser,
   createAppointment,
   updateAppointment,
-  deleteAppointment };
+  deleteAppointment 
+};

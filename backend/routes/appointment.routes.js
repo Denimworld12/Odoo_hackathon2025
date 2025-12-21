@@ -1,10 +1,12 @@
 const { Router } = require("express");
-const { getAllAppointments } = require("../controllers/users/appointment.controller.js");
+const { getAllAppointments, getAppointmentsByOrganiser } = require("../controllers/appointment.controller.js");
 const { createService, updateService, deleteService } = require("../controllers/post/appointments.controller.js");
 
 const router = Router();
 
 router.get("/all-appointments", getAllAppointments);
+
+router.get("/organiser/:organiser_id", getAppointmentsByOrganiser);
 
 router.post("/services", createService);
 

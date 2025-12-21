@@ -9,6 +9,21 @@ export interface User {
   avatar?: string;
 }
 
+export interface Question {
+  id: string;
+  label: string;
+  type: 'text' | 'textarea' | 'phone' | 'radio' | 'checkbox' | 'number';
+  required: boolean;
+  options?: string[];
+}
+
+export interface TimeSlotRange {
+  id: string;
+  from: string;
+  to: string;
+  enabled: boolean;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -19,6 +34,19 @@ export interface Service {
   location: string;
   type: 'Free' | 'Paid';
   providers: string[]; // List of names for the card display
+  published?: boolean;
+  bookType?: 'USER' | 'RESOURCE';
+  assignmentType?: 'AUTO' | 'MANUAL';
+  manageCapacity?: boolean;
+  maxBookingsPerSlot?: number;
+  slotCreation?: string;
+  cancellationHours?: number;
+  introductionMessage?: string;
+  confirmationMessage?: string;
+  picture?: string;
+  workingHours?: Record<string, TimeSlotRange[]>;
+  questions?: Question[];
+  manualConfirmation?: boolean;
 }
 
 export interface Provider {
@@ -33,17 +61,22 @@ export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLET
 
 export interface Appointment {
   id: string;
-  userId: string;
-  userName: string;
-  serviceId: string;
+  userId?: string;
+  userName?: string;
+  serviceId?: string;
   serviceName: string;
-  providerId: string;
+  providerId?: string;
   providerName: string;
   date: string; // ISO string
   timeSlot: string;
   status: AppointmentStatus;
-  venue: string;
+  venue?: string;
   notes?: string;
+  createdAt?: string;
+  paymentStatus?: 'PAID' | 'UNPAID';
+  location?: string;
+  duration?: number;
+  price?: number;
 }
 
 export interface TimeSlot {

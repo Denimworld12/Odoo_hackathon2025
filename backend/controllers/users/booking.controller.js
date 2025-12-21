@@ -1,4 +1,6 @@
 const { pool } = require("../../config/db");
+const { generateBookingPDF } = require("../../utils/pdfGenerator");
+const { sendBookingEmail } = require("../../utils/mail");
 
 /**
  * CREATE BOOKING
@@ -270,6 +272,122 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+/**
+ * DOWNLOAD BOOKING PDF
+ * GET /api/bookings/pdf/:id
+ */
+const downloadBookingPDF = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        b.id,
+        b.appointment_type_id,
+        b.customer_id,
+        b.resource_id,
+        b.assigned_user_id,
+        b.start_time,
+        b.end_time,
+        b.status,
+        b.payment_status,
+        b.created_at,
+        b.payment_id,
+        at.title AS service_name,
+        at.location,
+        at.duration_minutes,
+        at.booking_fee,
+        u.full_name AS provider_name,
+        c.full_name AS customer_name,
+        c.email AS customer_email
+      FROM bookings b
+      LEFT JOIN appointment_types at ON b.appointment_type_id = at.id
+      LEFT JOIN users u ON b.assigned_user_id = u.id
+      LEFT JOIN users c ON b.customer_id = c.id
+      WHERE b.id = $1
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    const booking = result.rows[0];
+    const pdfBuffer = await generateBookingPDF(booking);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=booking-${id}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("Download PDF error:", err);
+    res.status(500).json({ success: false, message: "Failed to generate PDF" });
+  }
+};
+
+/**
+ * EMAIL BOOKING REPORT
+ * POST /api/bookings/email/:id
+ */
+const emailBookingReport = async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body; // Optional: override email
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        b.id,
+        b.appointment_type_id,
+        b.customer_id,
+        b.resource_id,
+        b.assigned_user_id,
+        b.start_time,
+        b.end_time,
+        b.status,
+        b.payment_status,
+        b.created_at,
+        b.payment_id,
+        at.title AS service_name,
+        at.location,
+        at.duration_minutes,
+        at.booking_fee,
+        u.full_name AS provider_name,
+        c.full_name AS customer_name,
+        c.email AS customer_email
+      FROM bookings b
+      LEFT JOIN appointment_types at ON b.appointment_type_id = at.id
+      LEFT JOIN users u ON b.assigned_user_id = u.id
+      LEFT JOIN users c ON b.customer_id = c.id
+      WHERE b.id = $1
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    const booking = result.rows[0];
+    const toEmail = email || booking.customer_email;
+
+    if (!toEmail) {
+      return res.status(400).json({ success: false, message: "No email address provided" });
+    }
+
+    await sendBookingEmail(toEmail, booking);
+
+    res.json({ 
+      success: true, 
+      message: `Booking report sent to ${toEmail}` 
+    });
+  } catch (err) {
+    console.error("Email booking error:", err);
+    res.status(500).json({ success: false, message: "Failed to send email", error: err.message });
+  }
+};
+
 module.exports = {
   createBooking,
   getAllBookings,
@@ -277,5 +395,7 @@ module.exports = {
   getBookingsByCustomer,
   updateBooking,
   deleteBooking,
-  cancelBooking
+  cancelBooking,
+  downloadBookingPDF,
+  emailBookingReport
 };

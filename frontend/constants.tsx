@@ -66,7 +66,7 @@ export const MOCK_USER: User = {
 export const MOCK_ADMIN: User = {
   id: 'a1',
   name: 'Admin Master',
-  email: 'admin@bookease.com',
+  email: 'admin@aarkashan.com',
   role: 'ADMIN',
   avatar: 'https://picsum.photos/seed/admin/100'
 };

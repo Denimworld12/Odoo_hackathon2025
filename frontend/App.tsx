@@ -7,11 +7,34 @@ import UserPortal from './pages/UserPortal';
 import AdminPortal from './pages/AdminPortal';
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authStep, setAuthStep] = useState<'LOGIN' | 'SIGNUP' | 'OTP' | 'FORGOT'>('LOGIN');
+  // Initialize user from localStorage to prevent login redirect on refresh
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    if (storedUser && token) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (e) {
+        console.error('Error parsing stored user:', e);
+      }
+    }
+    return null;
+  });
+  const [authStep, setAuthStep] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT' | 'RESET'>('LOGIN');
   
   // For prototype ease, we'll allow switching roles at the top
-  const [viewRole, setViewRole] = useState<Role>('USER');
+  const [viewRole, setViewRole] = useState<Role>(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        return user.role || 'USER';
+      } catch (e) {
+        return 'USER';
+      }
+    }
+    return 'USER';
+  });
 
   useEffect(() => {
     // Sync user role with the view role for the simulation
@@ -21,10 +44,26 @@ const App: React.FC = () => {
   }, [viewRole]);
 
   const handleLogin = (role: Role) => {
+    // Get user from localStorage (set by AuthPages on successful login)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setCurrentUser(user);
+        setViewRole(user.role || role);
+        return;
+      } catch (e) {
+        console.error('Error parsing stored user:', e);
+      }
+    }
+    // Fallback to mock users for prototype
     setCurrentUser(role === 'ADMIN' ? MOCK_ADMIN : MOCK_USER);
+    setViewRole(role);
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setCurrentUser(null);
     setAuthStep('LOGIN');
   };
@@ -43,7 +82,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Simulation Role Switcher */}
       <div className="bg-indigo-900 text-white text-xs py-1 px-4 flex justify-between items-center shrink-0">
-        <span>PROTOTYPE MODE: Switch View To</span>
+        <span> View </span>
         <div className="flex gap-2">
           <button 
             onClick={() => setViewRole('USER')}

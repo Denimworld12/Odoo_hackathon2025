@@ -5,8 +5,10 @@ const {
   createBooking,
   getAllBookings,
   getBookingById,
+  getBookingsByCustomer,
   updateBooking,
-  deleteBooking
+  deleteBooking,
+  cancelBooking
 } = require("../controllers/users/booking.controller");
 
 // CREATE
@@ -15,9 +17,13 @@ router.post("/create", createBooking);
 // READ
 router.get("/all_bookings", getAllBookings);
 router.get("/booking/:id", getBookingById);
+router.get("/customer/:customer_id", getBookingsByCustomer);
 
 // UPDATE
 router.put("/update/:id", updateBooking);
+
+// CANCEL
+router.put("/cancel/:id", cancelBooking);
 
 // DELETE
 router.delete("/deletebooking/:id", deleteBooking);

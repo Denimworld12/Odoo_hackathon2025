@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { User, Appointment, Service, Provider } from '../types';
 import { 
   Calendar, Clock, MapPin, User as UserIcon, LogOut, LayoutDashboard, 
-  Settings, CheckCircle2, ChevronRight, Search, PlusCircle, X, Check, Filter, Loader2, AlertCircle, Timer
+  Settings, CheckCircle2, ChevronRight, Search, PlusCircle, X, Check, Filter, Loader2, AlertCircle, Timer,
+  Download, Mail
 } from 'lucide-react';
 import { MOCK_SERVICES, MOCK_PROVIDERS, MOCK_APPOINTMENTS, TIME_SLOTS } from '../constants';
 import { useBooking } from '../hooks/useBooking';
@@ -78,6 +79,12 @@ const UserPortal: React.FC<UserPortalProps> = ({ user, onLogout }) => {
   // Booking details modal
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Appointment | null>(null);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  
+  // Store confirmed booking ID for PDF/Email after confirmation
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
 
   // Fetch all appointment types for Dashboard
   useEffect(() => {
@@ -304,6 +311,7 @@ const UserPortal: React.FC<UserPortalProps> = ({ user, onLogout }) => {
     
     const booking = await confirmBooking(questionResponses, assignedUserId, paymentId);
     if (booking) {
+      setConfirmedBookingId(booking.id); // Store the booking ID for PDF/Email
       setBookingConfirmed(true);
       setBookingStep(6);
     }
@@ -324,9 +332,74 @@ const UserPortal: React.FC<UserPortalProps> = ({ user, onLogout }) => {
     setSelectedSlot(null);
     setBookingConfirmed(false);
     setLastPaymentId(null);
+    setConfirmedBookingId(null);
+    setEmailSent(false);
     setActiveTab('DASHBOARD');
     if (currentReservation) {
       cancelReservation();
+    }
+  };
+
+  // Download PDF
+  const handleDownloadPDF = async (bookingId: string) => {
+    setIsDownloadingPDF(true);
+    try {
+      const response = await fetch(`${API_BASE}/bookings/pdf/${bookingId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `booking-${bookingId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      alert('Failed to download PDF');
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
+  // Email booking report
+  const handleEmailReport = async (bookingId: string) => {
+    setIsSendingEmail(true);
+    setEmailSent(false);
+    try {
+      const storedUser = localStorage.getItem('user');
+      const userData = storedUser ? JSON.parse(storedUser) : null;
+      
+      const response = await fetch(`${API_BASE}/bookings/email/${bookingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({ email: userData?.email })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 3000);
+      } else {
+        alert(data.message || 'Failed to send email');
+      }
+    } catch (err) {
+      console.error('Error sending email:', err);
+      alert('Failed to send email');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -582,7 +655,7 @@ const UserPortal: React.FC<UserPortalProps> = ({ user, onLogout }) => {
                 </div>
               )}
 
-              {/* Step 2: Provider */}
+              Step 2: Provider
               {bookingStep === 2 && (
                 <div>
                   <h2 className="text-xl font-bold mb-5">Choose Your Specialist</h2>
@@ -875,6 +948,43 @@ const UserPortal: React.FC<UserPortalProps> = ({ user, onLogout }) => {
                     )}
                     <div className="text-[10px] text-slate-400 italic font-medium mt-2">*Check your email for full details.</div>
                   </div>
+                  
+                  {/* Download PDF & Email Report Buttons */}
+                  {confirmedBookingId && (
+                    <div className="flex gap-3 justify-center max-w-sm mx-auto">
+                      <button 
+                        onClick={() => handleDownloadPDF(confirmedBookingId)}
+                        disabled={isDownloadingPDF}
+                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-200 disabled:opacity-50"
+                      >
+                        {isDownloadingPDF ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                        {isDownloadingPDF ? 'Downloading...' : 'Download PDF'}
+                      </button>
+                      <button 
+                        onClick={() => handleEmailReport(confirmedBookingId)}
+                        disabled={isSendingEmail}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50 ${
+                          emailSent 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                        }`}
+                      >
+                        {isSendingEmail ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : emailSent ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <Mail className="w-4 h-4" />
+                        )}
+                        {isSendingEmail ? 'Sending...' : emailSent ? 'Email Sent!' : 'Email Report'}
+                      </button>
+                    </div>
+                  )}
+
                   <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3">
                     <button onClick={() => { resetBooking(); setActiveTab('PROFILE'); }} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm">Go to My Appointments</button>
                     <button onClick={resetBooking} className="border border-slate-200 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50">Back to Dashboard</button>
@@ -1065,6 +1175,42 @@ const UserPortal: React.FC<UserPortalProps> = ({ user, onLogout }) => {
                   </div>
                 )}
               </div>
+
+              {/* PDF & Email Actions */}
+              {!selectedBookingDetails.id.startsWith('apt') && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleDownloadPDF(selectedBookingDetails.id)}
+                    disabled={isDownloadingPDF}
+                    className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-200 disabled:opacity-50"
+                  >
+                    {isDownloadingPDF ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    {isDownloadingPDF ? 'Downloading...' : 'Download PDF'}
+                  </button>
+                  <button 
+                    onClick={() => handleEmailReport(selectedBookingDetails.id)}
+                    disabled={isSendingEmail}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50 ${
+                      emailSent 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                    }`}
+                  >
+                    {isSendingEmail ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : emailSent ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <Mail className="w-4 h-4" />
+                    )}
+                    {isSendingEmail ? 'Sending...' : emailSent ? 'Email Sent!' : 'Email Report'}
+                  </button>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 {(selectedBookingDetails.status === 'PENDING' || selectedBookingDetails.status === 'CONFIRMED') && !selectedBookingDetails.id.startsWith('apt') && (

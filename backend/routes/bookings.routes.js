@@ -8,7 +8,9 @@ const {
   getBookingsByCustomer,
   updateBooking,
   deleteBooking,
-  cancelBooking
+  cancelBooking,
+  downloadBookingPDF,
+  emailBookingReport
 } = require("../controllers/users/booking.controller");
 
 // CREATE
@@ -27,5 +29,9 @@ router.put("/cancel/:id", cancelBooking);
 
 // DELETE
 router.delete("/deletebooking/:id", deleteBooking);
+
+// PDF & EMAIL
+router.get("/pdf/:id", downloadBookingPDF);
+router.post("/email/:id", emailBookingReport);
 
 module.exports = router;

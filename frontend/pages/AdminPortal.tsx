@@ -49,7 +49,7 @@ interface ServiceForm extends Partial<Service> {
   workingHours?: Record<string, TimeSlot[]>;
 }
 
-const NavItem: React.FC<{
+const NavItemRoot: React.FC<{
   id: 'SERVICES' | 'BOOKINGS' | 'CALENDAR' | 'SETTINGS';
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -58,11 +58,13 @@ const NavItem: React.FC<{
 }> = ({ id, icon: Icon, label, activeTab, onClick }) => (
   <button
     onClick={() => onClick(id)}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-      activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all font-medium ${
+      activeTab === id
+        ? 'bg-slate-900 text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)]'
+        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
     }`}
   >
-    <Icon className="w-5 h-5" />
+    <Icon className="w-4.5 h-4.5" />
     {label}
   </button>
 );
@@ -186,11 +188,13 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
   }> = ({ id, icon: Icon, label }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-        activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all font-medium ${
+        activeTab === id
+          ? 'bg-slate-900 text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)]'
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
       }`}
     >
-      <Icon className="w-5 h-5" />
+      <Icon className="w-4.5 h-4.5" />
       {sidebarOpen && <span>{label}</span>}
     </button>
   );
@@ -327,8 +331,6 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
     }
 
     // Convert workingHours to schedules format for backend
-    // workingHours: { Monday: [{ id, from, to, enabled }], ... }
-    // schedules: [{ day_of_week: 0-6, start_time, end_time }]
     const dayToNumber: Record<string, number> = {
       'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
       'Thursday': 4, 'Friday': 5, 'Saturday': 6
@@ -352,8 +354,6 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
     }
 
     // Convert questions to backend format
-    // questions: [{ label, field_type, is_mandatory }]
-    // Map frontend types to database question_type enum values
     const typeMapping: Record<string, string> = {
       'text': 'TEXT',
       'textarea': 'MULTI_LINE',
@@ -453,15 +453,31 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
   return (
     <div className="flex h-[calc(100vh-24px)] overflow-hidden bg-slate-50">
       {/* Sidebar */}
-      <aside className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col ${sidebarOpen ? 'w-64' : 'w-20'}`}>
-        <div className="p-6 flex items-center justify-between">
-          {sidebarOpen && <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">Aarakshan</div>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-slate-100 rounded">
-            {sidebarOpen ? <X className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+      <aside className={`bg-white/95 backdrop-blur border-r border-slate-200 transition-all duration-300 flex flex-col shadow-[0_10px_40px_rgba(15,23,42,0.12)] ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+        <div className="p-4 flex items-center justify-between border-b border-slate-100">
+          {sidebarOpen && (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-sm font-bold">
+                Ar
+              </div>
+              <div className="text-sm font-black leading-tight">
+                <span className="block text-slate-900">Aarakshan</span>
+                <span className="block text-[10px] text-slate-400">Organiser</span>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
+          >
+            {sidebarOpen ? <X className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          <p className={`text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 ${!sidebarOpen && 'text-center'}`}>
+            {sidebarOpen ? 'Workspace' : 'Nav'}
+          </p>
           <NavItem id="SERVICES" icon={Settings} label="My Services" />
           <NavItem id="BOOKINGS" icon={Calendar} label="All Bookings" />
           <NavItem id="CALENDAR" icon={BarChart3} label="Calendar View" />
@@ -470,42 +486,53 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
         <div className="p-4 border-t border-slate-100">
           <div className={`flex items-center gap-3 p-3 rounded-2xl bg-slate-50 ${!sidebarOpen && 'justify-center'}`}>
-            <img src={user.avatar} className="w-8 h-8 rounded-full" alt="Organiser" />
+            <img src={user.avatar} className="w-8 h-8 rounded-full object-cover" alt="Organiser" />
             {sidebarOpen && (
               <div className="overflow-hidden">
-                <p className="text-xs font-bold truncate">{user.name}</p>
+                <p className="text-xs font-bold truncate text-slate-900">{user.name}</p>
                 <p className="text-[10px] text-slate-500">Organiser</p>
               </div>
             )}
-            {sidebarOpen && <button onClick={onLogout} className="ml-auto text-slate-400 hover:text-red-500 transition-colors"><LogOut className="w-4 h-4" /></button>}
+            {sidebarOpen && (
+              <button
+                onClick={onLogout}
+                className="ml-auto text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 sm:p-10">
-        <header className="flex justify-between items-center mb-10">
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-6 sm:p-8">
+        <header className="flex justify-between items-center mb-8 sticky top-0 z-10 bg-slate-50/90 backdrop-blur-sm pb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-black text-slate-900">
               {activeTab === 'SERVICES' && 'Service & Appointment Configuration'}
               {activeTab === 'BOOKINGS' && 'All Bookings'}
               {activeTab === 'CALENDAR' && 'Calendar View'}
               {activeTab === 'SETTINGS' && 'Resource Management'}
             </h1>
-            <p className="text-slate-500 text-sm">Manage your appointment types and bookings.</p>
+            <p className="text-slate-500 text-sm mt-1">Manage your appointment types and bookings.</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400">
+            <CheckCircle2 className="w-4 h-4" />
+            Last synced a few seconds ago
           </div>
         </header>
 
         {activeTab === 'SERVICES' && (
           <div className="space-y-6 animate-fade-in">
             {/* Action Bar */}
-            <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white rounded-2xl border border-slate-100 shadow-[0_12px_40px_rgba(15,23,42,0.06)] px-4 py-3">
               <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-2.5 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 w-4.5 h-4.5 text-slate-400" />
                 <input 
                   type="text" 
                   placeholder="Search services..." 
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 transition-all text-sm"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/5 transition-all text-sm"
                 />
               </div>
               <button 
@@ -526,25 +553,30 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                   setServices([...services, newService]);
                   handleEditService(newService);
                 }}
-                className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+                className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_14px_40px_rgba(15,23,42,0.5)] hover:bg-slate-800 transition-all"
               >
-                <PlusCircle className="w-5 h-5" /> Create Service
+                <PlusCircle className="w-4.5 h-4.5" /> Create Service
               </button>
             </div>
 
             {/* Services Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {services.map(service => (
-                <div key={service.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                <div
+                  key={service.id}
+                  className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_16px_40px_rgba(15,23,42,0.04)] hover:shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all group flex flex-col"
+                >
                   <div className="flex items-start justify-between mb-4">
-                    <div className="text-4xl">{service.icon}</div>
-                    <div className="flex gap-2">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-900/5 flex items-center justify-center text-2xl">
+                      {service.icon}
+                    </div>
+                    <div className="flex gap-1.5">
                       <button 
                         onClick={() => handleTogglePublish(service.id)}
-                        className={`p-2 rounded-lg transition-colors ${
+                        className={`p-2 rounded-lg transition-colors border ${
                           service.published 
-                            ? 'text-green-600 hover:bg-green-50' 
-                            : 'text-slate-400 hover:bg-slate-100'
+                            ? 'text-emerald-600 hover:bg-emerald-50 border-emerald-100' 
+                            : 'text-slate-400 hover:bg-slate-50 border-slate-100'
                         }`}
                         title={service.published ? 'Unpublish' : 'Publish'}
                       >
@@ -552,49 +584,54 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                       </button>
                       <button 
                         onClick={() => handleEditService(service)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-100"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleDeleteService(service.id)}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                   
-                  <h3 className="font-bold text-slate-900 mb-1 text-lg">{service.name}</h3>
-                  <p className="text-sm text-slate-500 mb-4 line-clamp-2">{service.description}</p>
+                  <h3 className="font-bold text-slate-900 mb-1 text-sm line-clamp-1">{service.name}</h3>
+                  <p className="text-[13px] text-slate-500 mb-4 line-clamp-2 min-h-[2.5rem]">
+                    {service.description || 'No description yet. Describe this appointment for visitors.'}
+                  </p>
                   
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-xs">
+                  <div className="space-y-2 mb-4 text-xs">
+                    <div className="flex items-center justify-between">
                       <span className="text-slate-500">Duration</span>
-                      <span className="font-bold text-slate-900">{service.duration} mins</span>
+                      <span className="font-semibold text-slate-900">{service.duration} mins</span>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between">
                       <span className="text-slate-500">Price</span>
-                      <span className="font-bold text-slate-900">${service.price}</span>
+                      <span className="font-semibold text-slate-900">
+                        {service.price ? `₹${service.price}` : 'Free'}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between">
                       <span className="text-slate-500">Status</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         service.published 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-slate-100 text-slate-500'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                          : 'bg-slate-100 text-slate-500 border border-slate-200'
                       }`}>
                         {service.published ? 'Published' : 'Draft'}
                       </span>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-50 flex gap-2">
+                  <div className="pt-3 border-t border-slate-100 flex gap-2 mt-auto">
                     <button 
                       onClick={() => handleEditService(service)}
-                      className="flex-1 bg-slate-900 text-white py-2 rounded-xl font-bold text-xs hover:bg-indigo-600 transition-all"
+                      className="flex-1 bg-slate-900 text-white py-2 rounded-xl font-bold text-[11px] hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5"
                     >
                       Configure
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={() => {
@@ -609,55 +646,69 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                   </div>
                 </div>
               ))}
+
+              {!isFetching && services.length === 0 && (
+                <div className="col-span-full py-10 flex flex-col items-center justify-center bg-white rounded-2xl border border-dashed border-slate-200">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+                    <Calendar className="w-7 h-7 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">No services yet</p>
+                  <p className="text-xs text-slate-500 mt-1">Create your first appointment type to start accepting bookings.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === 'BOOKINGS' && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fade-in">
-            <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_18px_50px_rgba(15,23,42,0.06)] overflow-hidden animate-fade-in">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
               <h2 className="text-lg font-bold text-slate-900">View All Meetings</h2>
-              <div className="flex gap-4">
-                <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl">All Time</button>
-                <button className="px-4 py-2 bg-white border border-slate-200 text-slate-500 text-sm font-bold rounded-xl hover:bg-slate-50">Upcoming</button>
+              <div className="flex gap-2">
+                <button className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-sm">
+                  All Time
+                </button>
+                <button className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-100">
+                  Upcoming
+                </button>
               </div>
               <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-3 top-2.5 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 w-4.5 h-4.5 text-slate-400" />
                 <input 
                   type="text" 
                   placeholder="Filter by customer..." 
-                  className="pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600 w-full sm:w-64"
+                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/5 w-full sm:w-64 text-sm"
                 />
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50/50">
-                  <tr className="text-left text-xs text-slate-400 font-bold uppercase tracking-wider">
-                    <th className="px-6 py-4">Name</th>
-                    <th className="px-6 py-4">Time</th>
-                    <th className="px-6 py-4">Resource</th>
-                    <th className="px-6 py-4">Answers</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                <thead className="bg-slate-50/70">
+                  <tr className="text-left text-[11px] text-slate-400 font-bold uppercase tracking-[0.12em]">
+                    <th className="px-6 py-3.5">Name</th>
+                    <th className="px-6 py-3.5">Time</th>
+                    <th className="px-6 py-3.5">Resource</th>
+                    <th className="px-6 py-3.5">Answers</th>
+                    <th className="px-6 py-3.5">Status</th>
+                    <th className="px-6 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {MOCK_APPOINTMENTS.map((apt) => (
-                    <tr key={apt.id} className="text-sm hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-900">{apt.userName}</td>
+                    <tr key={apt.id} className="text-sm hover:bg-slate-50/70 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-900">{apt.userName}</td>
                       <td className="px-6 py-4">
                         <div className="text-slate-900 font-medium">{apt.date}</div>
-                        <div className="text-slate-400 text-[10px]">{apt.timeSlot}</div>
+                        <div className="text-slate-400 text-[11px]">{apt.timeSlot}</div>
                       </td>
                       <td className="px-6 py-4 text-slate-600">{apt.providerName}</td>
                       <td className="px-6 py-4 text-slate-600">+919876543210</td>
                       <td className="px-6 py-4">
                         <select 
-                          className={`px-2 py-1 rounded-full text-[10px] font-bold border-none outline-none ${
-                            apt.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' : 
-                            apt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-slate-100 text-slate-500'
+                          className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold border-none outline-none ${
+                            apt.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-700' : 
+                            apt.status === 'PENDING' ? 'bg-amber-50 text-amber-700' :
+                            'bg-slate-100 text-slate-600'
                           }`}
                           defaultValue={apt.status}
                         >
@@ -667,7 +718,9 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                         </select>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-indigo-600 font-bold hover:underline text-sm">Manage</button>
+                        <button className="text-slate-900 font-semibold hover:underline text-sm">
+                          Manage
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -678,28 +731,30 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
         )}
 
         {(activeTab === 'CALENDAR' || activeTab === 'SETTINGS') && (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 animate-fade-in">
-            <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-400 mb-6">
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-100 shadow-[0_18px_50px_rgba(15,23,42,0.05)] animate-fade-in">
+            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-400 mb-6 shadow-inner">
               <Settings className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Feature Coming Soon</h2>
-            <p className="text-slate-500 max-w-sm text-center mt-2">This feature is currently under development.</p>
+            <h2 className="text-xl font-bold text-slate-900">Feature Coming Soon</h2>
+            <p className="text-slate-500 max-w-sm text-center mt-2 text-sm">
+              This feature is currently under development. Stay tuned for calendar insights and resource management tools.
+            </p>
           </div>
         )}
 
         {/* Share Link Modal */}
         {shareLinkVisible && selectedService && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShareLinkVisible(false)}>
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShareLinkVisible(false)}>
+            <div className="bg-white rounded-2xl shadow-[0_24px_80px_rgba(15,23,42,0.5)] max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-slate-900">Share Service</h3>
-                <button onClick={() => setShareLinkVisible(false)} className="p-1 hover:bg-slate-100 rounded">
-                  <X className="w-5 h-5 text-slate-400" />
+                <button onClick={() => setShareLinkVisible(false)} className="p-1.5 hover:bg-slate-100 rounded-full">
+                  <X className="w-4 h-4 text-slate-400" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Share Link</label>
+                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Share Link</label>
                   <div className="flex gap-2">
                     <input 
                       type="text" 
@@ -712,7 +767,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                         navigator.clipboard.writeText(generateShareLink());
                         alert('Link copied to clipboard!');
                       }}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+                      className="px-3.5 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 text-sm"
                       title="Copy link"
                     >
                       <Copy className="w-4 h-4" />
@@ -724,7 +779,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                     type="checkbox" 
                     checked={selectedService.published !== false}
                     onChange={() => {}}
-                    className="w-4 h-4 text-indigo-600 rounded"
+                    className="w-4 h-4 text-slate-900 rounded"
                     disabled
                   />
                   <span className="text-sm text-slate-700">Can share unpublished appointment</span>
@@ -732,7 +787,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                 <div className="pt-4 border-t border-slate-200">
                   <button
                     onClick={() => setShareLinkVisible(false)}
-                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700"
+                    className="w-full px-4 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 text-sm"
                   >
                     Close
                   </button>
@@ -744,30 +799,35 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
         {/* Service Configuration Modal */}
         {isEditingService && selectedService && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-[0_26px_90px_rgba(15,23,42,0.6)] max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/80 backdrop-blur-sm">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-xl font-bold text-slate-900">Appointment Title</h2>
-                  <input 
-                    type="text" 
-                    value={serviceForm.name || selectedService.name}
-                    onChange={(e) => setServiceForm({...serviceForm, name: e.target.value})}
-                    className="text-xl font-bold border-none outline-none bg-transparent focus:ring-2 focus:ring-indigo-100 rounded px-2"
-                    placeholder="Service name"
-                  />
+                  <div className="w-8 h-8 rounded-xl bg-slate-900/5 flex items-center justify-center text-xl">
+                    {selectedService.icon}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Appointment Title</span>
+                    <input 
+                      type="text" 
+                      value={serviceForm.name || selectedService.name}
+                      onChange={(e) => setServiceForm({...serviceForm, name: e.target.value})}
+                      className="text-lg font-semibold border-none outline-none bg-transparent focus:ring-2 focus:ring-slate-900/5 rounded px-2 text-slate-900"
+                      placeholder="Service name"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50">
-                    Preview
+                  <button className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" /> Preview
                   </button>
                   <button 
                     onClick={() => handleTogglePublish(selectedService.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 ${
                       serviceForm.published 
-                        ? 'bg-green-600 text-white hover:bg-green-700' 
-                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
+                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                     }`}
                   >
                     {serviceForm.published ? 'Published' : 'Publish'}
@@ -776,21 +836,21 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                     onClick={() => setIsEditingService(false)}
                     className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                   >
-                    <X className="w-5 h-5 text-slate-400" />
+                    <X className="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
               </div>
 
               {/* Configuration Tabs */}
-              <div className="border-b border-slate-100 px-6 shrink-0">
+              <div className="border-b border-slate-100 px-5 shrink-0 bg-white">
                 <div className="flex gap-1">
                   {(['BASIC', 'SCHEDULE', 'QUESTIONS', 'OPTIONS', 'MESSAGES'] as const).map(tab => (
                     <button
                       key={tab}
                       onClick={() => setConfigTab(tab)}
-                      className={`px-4 py-3 text-sm font-bold transition-colors border-b-2 ${
+                      className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${
                         configTab === tab
-                          ? 'border-indigo-600 text-indigo-600'
+                          ? 'border-slate-900 text-slate-900'
                           : 'border-transparent text-slate-500 hover:text-slate-900'
                       }`}
                     >
@@ -801,14 +861,14 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
                 {configTab === 'BASIC' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                       {/* Left Column */}
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Duration</label>
+                          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Duration</label>
                           <div className="flex items-center gap-2">
                             <input 
                               type="text" 
@@ -817,60 +877,60 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                 const [hours, minutes] = e.target.value.split(':').map(Number);
                                 setServiceForm({...serviceForm, duration: (hours || 0) * 60 + (minutes || 0)});
                               }}
-                              className="w-24 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                              className="w-24 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
                               placeholder="00:30"
                             />
-                            <span className="text-sm text-slate-500">Hours</span>
+                            <span className="text-xs text-slate-500">Hours</span>
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Location</label>
+                          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Location</label>
                           <input 
                             type="text" 
                             value={serviceForm.location || selectedService.location}
                             onChange={(e) => setServiceForm({...serviceForm, location: e.target.value})}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
                             placeholder="Doctor's Office"
                           />
-                          <p className="text-xs text-slate-400 mt-1">If Location is not set, consider it an Online Appointment</p>
+                          <p className="text-[11px] text-slate-400 mt-1">If Location is not set, consider it an Online Appointment</p>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold uppercase text-slate-400 mb-3">Book</label>
+                          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-3 tracking-[0.15em]">Book</label>
                           <div className="flex gap-4 mb-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm">
                               <input 
                                 type="radio" 
                                 name="bookType"
                                 checked={serviceForm.bookType === 'USER'}
                                 onChange={() => setServiceForm({...serviceForm, bookType: 'USER'})}
-                                className="w-4 h-4 text-indigo-600"
+                                className="w-4 h-4 text-slate-900"
                               />
-                              <span className="text-sm font-medium">User</span>
+                              <span className="font-medium">User</span>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm">
                               <input 
                                 type="radio" 
                                 name="bookType"
                                 checked={serviceForm.bookType === 'RESOURCE'}
                                 onChange={() => setServiceForm({...serviceForm, bookType: 'RESOURCE'})}
-                                className="w-4 h-4 text-indigo-600"
+                                className="w-4 h-4 text-slate-900"
                               />
-                              <span className="text-sm font-medium">Resources</span>
+                              <span className="font-medium">Resources</span>
                             </label>
                           </div>
 
                           {serviceForm.bookType === 'USER' && (
                             <div className="space-y-2">
-                              <label className="block text-xs text-slate-500 mb-2">Users</label>
+                              <label className="block text-[11px] text-slate-500 mb-2 uppercase tracking-[0.12em]">Users</label>
                               <div className="flex flex-wrap gap-2">
                                 {selectedService.providers.map((provider, idx) => (
                                   <button
                                     key={idx}
-                                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
                                   >
-                                    {provider} <span className="text-xs text-slate-400">A{idx + 1}</span>
+                                    {provider} <span className="text-[10px] text-slate-400">A{idx + 1}</span>
                                   </button>
                                 ))}
                               </div>
@@ -879,14 +939,14 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
                           {serviceForm.bookType === 'RESOURCE' && (
                             <div className="space-y-2">
-                              <label className="block text-xs text-slate-500 mb-2">Resources</label>
+                              <label className="block text-[11px] text-slate-500 mb-2 uppercase tracking-[0.12em]">Resources</label>
                               <div className="flex flex-wrap gap-2">
                                 {['Resource 1', 'Resource 2'].map((resource, idx) => (
                                   <button
                                     key={idx}
-                                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
                                   >
-                                    {resource} <span className="text-xs text-slate-400">R{idx + 1}</span>
+                                    {resource} <span className="text-[10px] text-slate-400">R{idx + 1}</span>
                                   </button>
                                 ))}
                               </div>
@@ -895,27 +955,27 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold uppercase text-slate-400 mb-3">Assignment</label>
+                          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-3 tracking-[0.15em]">Assignment</label>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm">
                               <input 
                                 type="radio" 
                                 name="assignment"
                                 checked={serviceForm.assignmentType === 'AUTO'}
                                 onChange={() => setServiceForm({...serviceForm, assignmentType: 'AUTO'})}
-                                className="w-4 h-4 text-indigo-600"
+                                className="w-4 h-4 text-slate-900"
                               />
-                              <span className="text-sm font-medium">Automatically</span>
+                              <span className="font-medium">Automatically</span>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm">
                               <input 
                                 type="radio" 
                                 name="assignment"
                                 checked={serviceForm.assignmentType === 'MANUAL'}
                                 onChange={() => setServiceForm({...serviceForm, assignmentType: 'MANUAL'})}
-                                className="w-4 h-4 text-indigo-600"
+                                className="w-4 h-4 text-slate-900"
                               />
-                              <span className="text-sm font-medium">By visitor</span>
+                              <span className="font-medium">By visitor</span>
                             </label>
                           </div>
                         </div>
@@ -926,7 +986,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                               type="checkbox" 
                               checked={serviceForm.manageCapacity || false}
                               onChange={(e) => setServiceForm({...serviceForm, manageCapacity: e.target.checked})}
-                              className="w-4 h-4 text-indigo-600 rounded"
+                              className="w-4 h-4 text-slate-900 rounded"
                             />
                             <span className="text-sm text-slate-700">Manage capacity</span>
                           </label>
@@ -936,8 +996,8 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                 type="number" 
                                 value={serviceForm.maxBookingsPerSlot || ''}
                                 onChange={(e) => setServiceForm({...serviceForm, maxBookingsPerSlot: parseInt(e.target.value)})}
-                                className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600 mt-2"
-                                placeholder="Allow Simultaneous Appointment(s) per user"
+                                className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
+                                placeholder="Allow simultaneous appointment(s) per user"
                               />
                             </div>
                           )}
@@ -946,26 +1006,26 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
                       {/* Right Column - Picture */}
                       <div>
-                        <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Picture</label>
-                        <div className="w-full h-48 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-indigo-300 transition-colors cursor-pointer">
+                        <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Picture</label>
+                        <div className="w-full h-48 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-slate-900/40 transition-colors cursor-pointer bg-slate-50/60">
                           {serviceForm.picture ? (
                             <img src={serviceForm.picture} alt="Service" className="w-full h-full object-cover rounded-xl" />
                           ) : (
                             <>
-                              <ImageIcon className="w-12 h-12 text-slate-400" />
+                              <ImageIcon className="w-10 h-10 text-slate-400" />
                               <span className="text-sm text-slate-500">Click to upload</span>
                             </>
                           )}
                           <div className="flex gap-2">
-                            <button className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg">
-                              <Upload className="w-4 h-4" />
+                            <button className="p-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg">
+                              <Upload className="w-4 h-4 text-slate-500" />
                             </button>
                             {serviceForm.picture && (
                               <button 
                                 onClick={() => setServiceForm({...serviceForm, picture: undefined})}
-                                className="p-2 bg-red-100 hover:bg-red-200 rounded-lg"
+                                className="p-2 bg-red-50 hover:bg-red-100 rounded-lg border border-red-100"
                               >
-                                <X className="w-4 h-4 text-red-600" />
+                                <X className="w-4 h-4 text-red-500" />
                               </button>
                             )}
                           </div>
@@ -977,14 +1037,14 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
                 {configTab === 'SCHEDULE' && (
                   <div className="space-y-4">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto bg-white rounded-2xl border border-slate-100 shadow-sm">
                       <table className="w-full">
                         <thead className="bg-slate-50">
                           <tr>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Every</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">From</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">To</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Actions</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">Every</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">From</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">To</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1008,7 +1068,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                           );
                                           setWorkingHours({...workingHours, [day]: updated});
                                         }}
-                                        className="px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-600"
+                                        className="px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-slate-900 text-xs"
                                       />
                                     </td>
                                     <td className="px-4 py-3">
@@ -1021,7 +1081,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                           );
                                           setWorkingHours({...workingHours, [day]: updated});
                                         }}
-                                        className="px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-600"
+                                        className="px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-slate-900 text-xs"
                                       />
                                     </td>
                                     <td className="px-4 py-3">
@@ -1040,7 +1100,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                   <td colSpan={3} className="px-4 py-3">
                                     <button
                                       onClick={() => handleAddTimeSlot(day)}
-                                      className="text-indigo-600 text-sm font-medium hover:underline"
+                                      className="text-xs text-slate-900 font-semibold hover:underline"
                                     >
                                       Add time slot
                                     </button>
@@ -1060,7 +1120,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                           }
                         });
                       }}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700"
+                      className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800"
                     >
                       Add a line
                     </button>
@@ -1070,14 +1130,14 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                 {configTab === 'QUESTIONS' && (
                   <div className="space-y-6">
                     {/* Existing Questions Table */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto bg-white rounded-2xl border border-slate-100 shadow-sm">
                       <table className="w-full">
                         <thead className="bg-slate-50">
                           <tr>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Question</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Answer type</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Mandatory</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-400">Actions</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">Question</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">Answer type</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">Mandatory</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase text-slate-400 tracking-[0.12em]">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1088,7 +1148,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                 {QUESTION_TYPES.find(t => t.value === q.type)?.label || q.type}
                               </td>
                               <td className="px-4 py-3">
-                                <input type="checkbox" checked={q.required} disabled className="w-4 h-4 text-indigo-600 rounded" />
+                                <input type="checkbox" checked={q.required} disabled className="w-4 h-4 text-slate-900 rounded" />
                               </td>
                               <td className="px-4 py-3">
                                 <button
@@ -1116,16 +1176,16 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                       <h3 className="text-sm font-bold text-slate-900">Add a question</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Answer type</label>
+                          <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Answer type</label>
                           <div className="grid grid-cols-2 gap-2">
                             {QUESTION_TYPES.map(type => (
                               <button
                                 key={type.value}
                                 onClick={() => setNewQuestion({...newQuestion, type: type.value, options: (type.value === 'radio' || type.value === 'checkbox') ? ['Option 1'] : undefined})}
-                                className={`px-3 py-2 border rounded-xl text-xs font-medium transition-colors ${
+                                className={`px-3 py-2 border rounded-xl text-[11px] font-medium transition-colors ${
                                   newQuestion.type === type.value
-                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
-                                    : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+                                    ? 'border-slate-900 bg-slate-900 text-white'
+                                    : 'border-slate-200 text-slate-600 hover:border-slate-400'
                                 }`}
                               >
                                 {type.label}
@@ -1134,7 +1194,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                           </div>
                           {(newQuestion.type === 'radio' || newQuestion.type === 'checkbox') && (
                             <div className="mt-4 space-y-2">
-                              <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Options</label>
+                              <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Options</label>
                               {(newQuestion.options || []).map((opt, idx) => (
                                 <div key={idx} className="flex gap-2">
                                   <input
@@ -1145,7 +1205,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                                       updated[idx] = e.target.value;
                                       setNewQuestion({...newQuestion, options: updated});
                                     }}
-                                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-600 text-sm"
+                                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-slate-900 text-sm"
                                     placeholder={`Option ${idx + 1}`}
                                   />
                                   <button
@@ -1161,7 +1221,7 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                               ))}
                               <button
                                 onClick={() => setNewQuestion({...newQuestion, options: [...(newQuestion.options || []), `Option ${(newQuestion.options?.length || 0) + 1}`]})}
-                                className="text-sm text-indigo-600 font-medium hover:underline"
+                                className="text-xs text-slate-900 font-semibold hover:underline"
                               >
                                 + Add Option
                               </button>
@@ -1170,12 +1230,12 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                         </div>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Question</label>
+                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Question</label>
                             <input
                               type="text"
                               value={newQuestion.label || ''}
                               onChange={(e) => setNewQuestion({...newQuestion, label: e.target.value})}
-                              className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                              className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
                               placeholder="Anything else we should know?"
                             />
                           </div>
@@ -1184,14 +1244,14 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                               type="checkbox"
                               checked={newQuestion.required || false}
                               onChange={(e) => setNewQuestion({...newQuestion, required: e.target.checked})}
-                              className="w-4 h-4 text-indigo-600 rounded"
+                              className="w-4 h-4 text-slate-900 rounded"
                             />
                             <span className="text-sm text-slate-700">Mandatory Answer</span>
                           </label>
                           <button
                             onClick={handleAddQuestion}
                             disabled={!newQuestion.label || ((newQuestion.type === 'radio' || newQuestion.type === 'checkbox') && (!newQuestion.options || newQuestion.options.length === 0))}
-                            className="w-full px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Add Question
                           </button>
@@ -1203,17 +1263,17 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
                 {configTab === 'OPTIONS' && (
                   <div className="space-y-6">
-                    <div className="space-y-4">
+                    <div className="space-y-4 bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input 
                           type="checkbox" 
                           checked={serviceForm.manualConfirmation || false}
                           onChange={(e) => setServiceForm({...serviceForm, manualConfirmation: e.target.checked})}
-                          className="w-4 h-4 text-indigo-600 rounded"
+                          className="w-4 h-4 text-slate-900 rounded"
                         />
                         <span className="text-sm text-slate-700">Manual confirmation</span>
                         {serviceForm.manualConfirmation && (
-                          <span className="text-xs text-slate-500">Upto 50% of capacity</span>
+                          <span className="text-[11px] text-slate-500">Upto 50% of capacity</span>
                         )}
                       </label>
 
@@ -1222,46 +1282,46 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
                           type="checkbox" 
                           checked={serviceForm.advancePayment || false}
                           onChange={(e) => setServiceForm({...serviceForm, advancePayment: e.target.checked})}
-                          className="w-4 h-4 text-indigo-600 rounded"
+                          className="w-4 h-4 text-slate-900 rounded"
                         />
                         <span className="text-sm text-slate-700">Paid Booking</span>
                         {serviceForm.advancePayment && (
-                          <div className="ml-4">
-                            <span className="text-xs text-slate-500">Booking Fees (Rs </span>
+                          <div className="ml-4 flex items-center gap-1 text-[11px] text-slate-500">
+                            <span>Booking Fees (Rs</span>
                             <input
                               type="number"
                               value={serviceForm.price || 0}
                               onChange={(e) => setServiceForm({...serviceForm, price: parseFloat(e.target.value)})}
                               className="w-20 px-2 py-1 border border-slate-200 rounded text-xs inline-block"
                             />
-                            <span className="text-xs text-slate-500"> Per booking)</span>
+                            <span>per booking)</span>
                           </div>
                         )}
                       </label>
 
                       <div>
-                        <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Create Slot</label>
+                        <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Create Slot</label>
                         <div className="flex items-center gap-2">
                           <input 
                             type="text" 
                             value={serviceForm.slotCreation || String(selectedService.duration)}
                             onChange={(e) => setServiceForm({...serviceForm, slotCreation: e.target.value})}
-                            className="w-24 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                            className="w-24 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
                             placeholder="00:30"
                           />
-                          <span className="text-sm text-slate-500">hours</span>
+                          <span className="text-xs text-slate-500">hours</span>
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Cancellation</label>
+                        <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Cancellation</label>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-slate-500">up to</span>
                           <input 
                             type="number" 
                             value={serviceForm.cancellationHours || 1}
                             onChange={(e) => setServiceForm({...serviceForm, cancellationHours: parseInt(e.target.value)})}
-                            className="w-20 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                            className="w-20 px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
                           />
                           <span className="text-sm text-slate-500">hour(s) before the booking</span>
                         </div>
@@ -1272,24 +1332,24 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
 
                 {configTab === 'MESSAGES' && (
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Introduction page message</label>
+                    <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                      <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Introduction page message</label>
                       <textarea
                         value={serviceForm.introductionMessage || ''}
                         onChange={(e) => setServiceForm({...serviceForm, introductionMessage: e.target.value})}
                         rows={4}
-                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
-                        placeholder="Schedule your visit today and experience expert dental care brought right to your doorstep."
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
+                        placeholder="Schedule your visit today and experience expert care."
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Confirmation page message</label>
+                    <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                      <label className="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-[0.15em]">Confirmation page message</label>
                       <textarea
                         value={serviceForm.confirmationMessage || ''}
                         onChange={(e) => setServiceForm({...serviceForm, confirmationMessage: e.target.value})}
                         rows={4}
-                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
-                        placeholder="Thank you for your trust we look forward to meeting you"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-slate-900 text-sm"
+                        placeholder="Thank you for your trust, we look forward to meeting you."
                       />
                     </div>
                   </div>
@@ -1297,16 +1357,16 @@ const OrganiserPortal: React.FC<OrganiserPortalProps> = ({ user, onLogout }) => 
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+              <div className="p-5 border-t border-slate-100 flex justify-end gap-3 shrink-0 bg-white">
                 <button 
                   onClick={() => setIsEditingService(false)}
-                  className="px-6 py-2 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50"
+                  className="px-5 py-2 border border-slate-200 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleSaveService}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 flex items-center gap-2"
+                  className="px-5 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   Save Changes

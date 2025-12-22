@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Role } from './types';
 import { MOCK_USER, MOCK_ADMIN } from './constants';
 import AuthPages from './pages/AuthPages';
 import UserPortal from './pages/UserPortal';
 import AdminPortal from './pages/AdminPortal';
+import LandingPage from './pages/LandingPage'; // Import the new page
 
 const App: React.FC = () => {
-  // Initialize user from localStorage to prevent login redirect on refresh
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -20,9 +19,10 @@ const App: React.FC = () => {
     }
     return null;
   });
+
+  // New state to manage the landing page visibility
+  const [showAuth, setShowAuth] = useState(false);
   const [authStep, setAuthStep] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT' | 'RESET'>('LOGIN');
-  
-  // For prototype ease, we'll allow switching roles at the top
   const [viewRole, setViewRole] = useState<Role>(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -37,14 +37,12 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    // Sync user role with the view role for the simulation
     if (currentUser) {
       setCurrentUser(prev => prev ? { ...prev, role: viewRole } : null);
     }
   }, [viewRole]);
 
   const handleLogin = (role: Role) => {
-    // Get user from localStorage (set by AuthPages on successful login)
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
@@ -56,7 +54,6 @@ const App: React.FC = () => {
         console.error('Error parsing stored user:', e);
       }
     }
-    // Fallback to mock users for prototype
     setCurrentUser(role === 'ADMIN' ? MOCK_ADMIN : MOCK_USER);
     setViewRole(role);
   };
@@ -65,10 +62,17 @@ const App: React.FC = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setCurrentUser(null);
+    setShowAuth(false); // Go back to landing page on logout
     setAuthStep('LOGIN');
   };
 
-  if (!currentUser) {
+  // 1. If not logged in and haven't clicked "Get Started/Sign In", show landing
+  if (!currentUser && !showAuth) {
+    return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+  }
+
+  // 2. If clicked "Sign In" but not authenticated yet, show AuthPages
+  if (!currentUser && showAuth) {
     return (
       <AuthPages 
         step={authStep} 
@@ -78,11 +82,11 @@ const App: React.FC = () => {
     );
   }
 
+  // 3. Authenticated View
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Simulation Role Switcher */}
       <div className="bg-indigo-900 text-white text-xs py-1 px-4 flex justify-between items-center shrink-0">
-        <span> View </span>
+        <span> View Mode Simulator </span>
         <div className="flex gap-2">
           <button 
             onClick={() => setViewRole('USER')}
